@@ -143,21 +143,18 @@ We are building this open-source to help the entire Stellar community. All contr
 ### Getting Started
 
 1.  Clone the repo:
-
     ```bash
     git clone https://github.com/dotandev/hintents.git
     cd hintents
     ```
 
 2.  Install dependencies:
-
     ```bash
     go mod download
     cd simulator && cargo fetch && cd ..
     ```
 
 3.  Build the Rust simulator:
-
     ```bash
     cd simulator
     cargo build --release
@@ -193,7 +190,6 @@ pip install pre-commit && pre-commit install
 ```
 
 The CI pipeline fails immediately on:
-
 - Unused variables, imports, or functions
 - Dead code
 - Any linting warnings
@@ -254,7 +250,6 @@ Follow the [Conventional Commits](https://www.conventionalcommits.org/) specific
 ```
 
 **Types**:
-
 - `feat`: A new feature
 - `fix`: A bug fix
 - `test`: Adding or improving tests
@@ -267,7 +262,6 @@ Follow the [Conventional Commits](https://www.conventionalcommits.org/) specific
 **Scopes**: Use specific areas like `sim`, `cli`, `updater`, `trace`, `analyzer`, etc.
 
 **Examples**:
-
 ```
 feat(sim): Add protocol version spoofing for harness
 test(sim): Add 1000+ transaction regression suite
@@ -276,7 +270,6 @@ docs: Add comprehensive contribution guidelines
 ```
 
 **Rules**:
-
 - Keep subject line under 50 characters
 - Use imperative mood ("add", not "added" or "adds")
 - No period at the end of the subject
@@ -296,22 +289,17 @@ docs: Add comprehensive contribution guidelines
    - Code coverage must not decrease
    - All tests must pass locally before submitting
 4. **Format**:
-
    ```markdown
    ## Description
-
    Brief explanation of the changes.
 
    ## Related Issues
-
    Closes #350, relates to #343
 
    ## Testing
-
    How was this tested? Include specific test cases.
 
    ## Checklist
-
    - [ ] Code follows style guidelines
    - [ ] Tests added/updated
    - [ ] Documentation updated
@@ -324,7 +312,6 @@ docs: Add comprehensive contribution guidelines
 - **Coverage**: Aim for 80%+ coverage. Critical paths should have 90%+ coverage
 - **Integration Tests**: Include tests that verify feature interactions
 - **Running Tests**:
-
   ```bash
   # Go tests
   go test -v -race ./...
@@ -334,7 +321,6 @@ docs: Add comprehensive contribution guidelines
   cargo test --all
   cargo test --all --release
   ```
-
 - **Bench Tests**: For performance-critical code, include benchmarks
   ```bash
   go test -bench=. -benchmem ./...
@@ -343,7 +329,6 @@ docs: Add comprehensive contribution guidelines
 ### Development Workflow
 
 1. **Create a branch**:
-
    ```bash
    git checkout -b feat/my-feature
    # or for bug fixes:
@@ -351,7 +336,6 @@ docs: Add comprehensive contribution guidelines
    ```
 
 2. **Make changes** and test locally:
-
    ```bash
    go test ./...
    go fmt ./...
@@ -361,14 +345,12 @@ docs: Add comprehensive contribution guidelines
    ```
 
 3. **Commit with conventional messages**:
-
    ```bash
    git add .
    git commit -m "feat(scope): description"
    ```
 
 4. **Push and create PR**:
-
    ```bash
    git push origin feat/my-feature
    # Then create PR on GitHub with detailed description
@@ -413,26 +395,22 @@ See [docs/proposal.md](docs/proposal.md) for the detailed proposal.
 ### Common Development Tasks
 
 #### Running a single test
-
 ```bash
 go test -run TestName ./package
 ```
 
 #### Profiling a test
-
 ```bash
 go test -cpuprofile=cpu.prof -memprofile=mem.prof ./...
 go tool pprof cpu.prof
 ```
 
 #### Building for a specific OS
-
 ```bash
 GOOS=linux GOARCH=amd64 go build -o erst-linux-amd64 ./cmd/erst
 ```
 
 #### Cleaning build artifacts
-
 ```bash
 go clean
 cargo clean
@@ -442,7 +420,6 @@ make clean
 ### Code Review Checklist
 
 When reviewing PRs, ensure:
-
 - [ ] Code follows naming and style conventions
 - [ ] Error handling is appropriate
 - [ ] Tests are adequate and pass
