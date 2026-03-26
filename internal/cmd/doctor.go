@@ -447,11 +447,18 @@ func runFixers(deps []DependencyStatus, skipConfirm, verbose bool) error {
 		}
 	}
 
-	// NEW: Fix go.mod dependencies (always ask separately)
-	fmt.Printf("Fix missing go.mod dependencies? [y/N]: ")
-	reader := bufio.NewReader(os.Stdin)
-	response, _ := reader.ReadString('\n')
-	if skipConfirm || strings.HasPrefix(strings.ToLower(response), "y") {
+	// NEW: Fix go.mod dependencies (separate confirmation unless --yes is used)
+	goModFixNeeded := false
+	if skipConfirm {
+		// In non-interactive/CI mode, skip prompt and apply fix automatically
+		goModFixNeeded = true
+	} else {
+		fmt.Printf("Fix missing go.mod dependencies? [y/N]: ")
+		reader := bufio.NewReader(os.Stdin)
+		response, _ := reader.ReadString('\n')
+		goModFixNeeded = strings.HasPrefix(strings.ToLower(response), "y")
+	}
+	if goModFixNeeded {
 		err := FixGoModDependencies(verbose)
 		if err != nil {
 			failedFixes = append(failedFixes, fmt.Sprintf("go.mod dependencies: %v", err))
