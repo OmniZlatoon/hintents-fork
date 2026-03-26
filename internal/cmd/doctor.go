@@ -6,6 +6,7 @@ package cmd
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -20,7 +21,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// DependencyID is a unique identifier for each dependency (Issue #8: type-safe dispatch)
+type DependencyID string
+
+const (
+	DepGo                DependencyID = "go"
+	DepRust              DependencyID = "rust"
+	DepCargo             DependencyID = "cargo"
+	DepSimulator         DependencyID = "simulator"
+	DepCacheDir          DependencyID = "cache_dir"
+	DepProtocolRegistry  DependencyID = "protocol_registry"
+	DepGoModDependencies DependencyID = "go_mod_dependencies"
+	DepConfigTOML        DependencyID = "toml_config"
+	DepRPC               DependencyID = "rpc"
+)
+
 type DependencyStatus struct {
+	ID        DependencyID // NEW: unique identifier for type-safe dispatch
 	Name      string
 	Installed bool
 	Version   string
@@ -72,7 +89,9 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		checkRust(verbose),
 		checkCargo(verbose),
 		checkSimulator(verbose),
-		checkCacheDir(verbose), 
+		checkCacheDir(verbose),
+		checkProtocolRegistry(verbose),
+		checkGoModDependencies(verbose),
 		checkConfigTOML(verbose),
 		checkRPC(verbose),
 	}
@@ -135,6 +154,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 
 func checkGo(verbose bool) DependencyStatus {
 	dep := DependencyStatus{
+		ID:      DepGo,
 		Name:    "Go",
 		FixHint: "Install Go from https://go.dev/doc/install (requires Go 1.21+)",
 		Fixable: false, // Cannot auto-fix Go installation
@@ -180,6 +200,7 @@ func checkGo(verbose bool) DependencyStatus {
 
 func checkRust(verbose bool) DependencyStatus {
 	dep := DependencyStatus{
+		ID:      DepRust,
 		Name:    "Rust (rustc)",
 		FixHint: "Install Rust from https://rustup.rs/ or run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
 		Fixable: false,
@@ -210,6 +231,7 @@ func checkRust(verbose bool) DependencyStatus {
 
 func checkCargo(verbose bool) DependencyStatus {
 	dep := DependencyStatus{
+		ID:      DepCargo,
 		Name:    "Cargo",
 		FixHint: "Cargo is included with Rust. Install from https://rustup.rs/",
 		Fixable: false,
@@ -240,6 +262,7 @@ func checkCargo(verbose bool) DependencyStatus {
 
 func checkSimulator(verbose bool) DependencyStatus {
 	dep := DependencyStatus{
+		ID:      DepSimulator,
 		Name:    "Simulator Binary (erst-sim)",
 		FixHint: "Build the simulator: cd simulator && cargo build --release",
 		Fixable: true, // CAN be auto-fixed
@@ -281,9 +304,10 @@ func checkSimulator(verbose bool) DependencyStatus {
 	return dep
 }
 
-// checkCacheDir verifies the cache directory exists
+// checkCacheDir verifies the cache directory exists (NEW: Issue #9)
 func checkCacheDir(verbose bool) DependencyStatus {
 	dep := DependencyStatus{
+		ID:      DepCacheDir,
 		Name:    "Cache directory (~/.erst)",
 		FixHint: "Run 'erst doctor --fix' to create cache directory",
 		Fixable: true, // CAN be auto-fixed
@@ -321,10 +345,86 @@ func checkCacheDir(verbose bool) DependencyStatus {
 	dep.Version = "configured"
 	return dep
 }
+
+// checkProtocolRegistry verifies the protocol registry exists (NEW: Issue #9)
+func checkProtocolRegistry(verbose bool) DependencyStatus {
+	dep := DependencyStatus{
+		ID:      DepProtocolRegistry,
+		Name:    "Protocol Registry",
+		FixHint: "Run 'erst doctor --fix' to initialize protocol registry",
+		Fixable: true,
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		dep.FixHint = "Failed to determine home directory"
+		return dep
+	}
+
+	registryFile := filepath.Join(homeDir, ".erst", "protocols", "registered.json")
+
+	// Check if registry file exists and is valid
+	if _, err := os.Stat(registryFile); err != nil {
+		if os.IsNotExist(err) {
+			return dep // Not installed, but fixable
+		}
+		dep.FixHint = fmt.Sprintf("Registry file exists but inaccessible: %v", err)
+		return dep
+	}
+
+	// Verify it's valid JSON
+	data, err := os.ReadFile(registryFile)
+	if err != nil {
+		dep.FixHint = fmt.Sprintf("Failed to read registry: %v", err)
+		return dep
+	}
+
+	var registry map[string]interface{}
+	if err := json.Unmarshal(data, &registry); err != nil {
+		dep.FixHint = "Protocol registry is corrupted JSON"
+		return dep
+	}
+
+	dep.Installed = true
+	dep.Version = "configured"
+	return dep
+}
+
+// checkGoModDependencies verifies go.mod dependencies are synchronized (NEW: Issue #9)
+func checkGoModDependencies(verbose bool) DependencyStatus {
+	dep := DependencyStatus{
+		ID:      DepGoModDependencies,
+		Name:    "Go Module Dependencies",
+		FixHint: "Run 'erst doctor --fix' to resolve dependencies",
+		Fixable: true,
+	}
+
+	// Check if go.mod exists
+	if _, err := os.Stat("go.mod"); err != nil {
+		if os.IsNotExist(err) {
+			return dep // Not present
+		}
+		dep.FixHint = fmt.Sprintf("go.mod inaccessible: %v", err)
+		return dep
+	}
+
+	// Check go.sum exists
+	if _, err := os.Stat("go.sum"); err != nil {
+		if os.IsNotExist(err) {
+			return dep // Missing go.sum, needs fix
+		}
+	}
+
+	dep.Installed = true
+	dep.Version = "synchronized"
+	return dep
+}
+
 // checkConfigTOML verifies that any present configuration file can be parsed
 // as basic TOML (naive syntax check). Missing file is treated as OK.
 func checkConfigTOML(verbose bool) DependencyStatus {
 	dep := DependencyStatus{
+		ID:      DepConfigTOML,
 		Name:    "TOML config",
 		FixHint: "Fix syntax in .erst.toml or remove the malformed file",
 		Fixable: false,
@@ -377,6 +477,7 @@ func checkConfigTOML(verbose bool) DependencyStatus {
 // checkRPC attempts a health ping to the current rpc endpoint
 func checkRPC(verbose bool) DependencyStatus {
 	dep := DependencyStatus{
+		ID:      DepRPC,
 		Name:    "RPC endpoint",
 		FixHint: "Set ERST_RPC_URL or ensure the default RPC is reachable",
 		Fixable: false,
@@ -404,7 +505,7 @@ func checkRPC(verbose bool) DependencyStatus {
 	return dep
 }
 
-// NEW: runFixers orchestrates automatic fixes
+// NEW: runFixers orchestrates automatic fixes with ID-based dispatch (Issues #3, #7, #8)
 func runFixers(deps []DependencyStatus, skipConfirm, verbose bool) error {
 	var failedFixes []string
 	var successFixes []string
@@ -427,15 +528,17 @@ func runFixers(deps []DependencyStatus, skipConfirm, verbose bool) error {
 			continue
 		}
 
-		// Execute appropriate fixer - FIXED matching logic
+		// FIXED: Use ID-based dispatch instead of brittle string matching (Issue #8)
 		var err error
-		switch {
-		case strings.Contains(dep.Name, "Cache directory"):
+		switch dep.ID {
+		case DepCacheDir:
 			err = FixMissingCacheDir(verbose)
-		case strings.Contains(dep.Name, "Simulator Binary"):
+		case DepSimulator:
 			err = FixSimulatorBinary(verbose)
-		case strings.Contains(dep.Name, "Protocol"):
+		case DepProtocolRegistry:
 			err = FixProtocolRegistration(verbose)
+		case DepGoModDependencies:
+			err = FixGoModDependencies(verbose)
 		default:
 			continue
 		}
@@ -444,19 +547,6 @@ func runFixers(deps []DependencyStatus, skipConfirm, verbose bool) error {
 			failedFixes = append(failedFixes, fmt.Sprintf("%s: %v", dep.Name, err))
 		} else {
 			successFixes = append(successFixes, dep.Name)
-		}
-	}
-
-	// NEW: Fix go.mod dependencies (always ask separately)
-	fmt.Printf("Fix missing go.mod dependencies? [y/N]: ")
-	reader := bufio.NewReader(os.Stdin)
-	response, _ := reader.ReadString('\n')
-	if skipConfirm || strings.HasPrefix(strings.ToLower(response), "y") {
-		err := FixGoModDependencies(verbose)
-		if err != nil {
-			failedFixes = append(failedFixes, fmt.Sprintf("go.mod dependencies: %v", err))
-		} else {
-			successFixes = append(successFixes, "go.mod dependencies")
 		}
 	}
 
@@ -477,7 +567,11 @@ func runFixers(deps []DependencyStatus, skipConfirm, verbose bool) error {
 		return fmt.Errorf("some fixes failed")
 	}
 
-	fmt.Println("\033[32m[OK] All fixes applied successfully!\033[0m")
+	if len(successFixes) > 0 {
+		fmt.Println("\033[32m[OK] All fixes applied successfully!\033[0m")
+	} else {
+		fmt.Println("[OK] No fixes needed")
+	}
 	return nil
 }
 

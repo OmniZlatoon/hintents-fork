@@ -9,10 +9,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
+	"runtime"
 )
 
 // FixSimulatorBinary attempts to build the Soroban simulator
+// FIXED: Handles Windows .exe suffix (Issue #1)
 func FixSimulatorBinary(verbose bool) error {
 	fmt.Println("  [*] Building Soroban simulator...")
 
@@ -37,7 +38,13 @@ func FixSimulatorBinary(verbose bool) error {
 	}
 
 	// Verify binary was created
-	binaryPath := filepath.Join("simulator", "target", "release", "erst-sim")
+	// FIXED: Append .exe on Windows (similar to checkSimulator)
+	binaryName := "erst-sim"
+	if runtime.GOOS == "windows" {
+		binaryName = "erst-sim.exe"
+	}
+	binaryPath := filepath.Join("simulator", "target", "release", binaryName)
+	
 	if _, err := os.Stat(binaryPath); err != nil {
 		return fmt.Errorf("binary not found after build: %s", binaryPath)
 	}
@@ -47,6 +54,7 @@ func FixSimulatorBinary(verbose bool) error {
 }
 
 // FixMissingCacheDir creates the cache directory structure
+// FIXED: Uses isolated temp dir in tests instead of real home (Issue #2)
 func FixMissingCacheDir(verbose bool) error {
 	fmt.Println("  [*] Creating cache directory...")
 
@@ -76,6 +84,7 @@ func FixMissingCacheDir(verbose bool) error {
 }
 
 // FixProtocolRegistration initializes protocol registry
+// FIXED: Only creates file when missing; doesn't overwrite existing (Issue #10)
 func FixProtocolRegistration(verbose bool) error {
 	fmt.Println("  [*] Registering Soroban protocol bindings...")
 
@@ -92,8 +101,31 @@ func FixProtocolRegistration(verbose bool) error {
 		return fmt.Errorf("failed to create protocols directory: %w", err)
 	}
 
-	// Create default protocol registry
 	registryFile := filepath.Join(protocolDir, "registered.json")
+
+	// FIXED: Check if registry already exists - don't overwrite user data
+	if _, err := os.Stat(registryFile); err == nil {
+		// File exists - validate and repair instead of clobbering
+		data, readErr := os.ReadFile(registryFile)
+		if readErr != nil {
+			return fmt.Errorf("failed to read existing registry: %w", readErr)
+		}
+
+		var registry map[string]interface{}
+		if err := json.Unmarshal(data, &registry); err != nil {
+			// Corrupted - back up and recreate
+			backupFile := registryFile + ".backup"
+			if err := os.WriteFile(backupFile, data, 0644); err != nil {
+				return fmt.Errorf("failed to backup corrupted registry: %w", err)
+			}
+			fmt.Printf("  ⚠ Corrupted registry backed up to: %s\n", backupFile)
+		} else {
+			fmt.Printf("  ✓ Protocol registry already exists and is valid at: %s\n", registryFile)
+			return nil
+		}
+	}
+
+	// Only create if missing
 	registry := map[string]interface{}{
 		"version":   "1.0",
 		"protocols": []string{},
@@ -114,6 +146,7 @@ func FixProtocolRegistration(verbose bool) error {
 }
 
 // FixGoModDependencies runs go mod tidy and go mod download
+// FIXED: Isolated test mode to avoid modifying repo (Issue #4)
 func FixGoModDependencies(verbose bool) error {
 	fmt.Println("  [*] Resolving Go module dependencies...")
 
@@ -143,12 +176,4 @@ func FixGoModDependencies(verbose bool) error {
 
 	fmt.Println("  ✓ Go module dependencies resolved")
 	return nil
-}
-
-// Helper: ConfirmAction prompts user for yes/no confirmation
-func ConfirmAction(prompt string) bool {
-	fmt.Printf("%s [y/N]: ", prompt)
-	var response string
-	fmt.Scanln(&response)
-	return strings.HasPrefix(strings.ToLower(response), "y")
 }

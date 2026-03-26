@@ -10,22 +10,32 @@ import (
 	"testing"
 )
 
-// TestFixMissingCacheDir verifies cache directory creation
+// FIXED: TestFixMissingCacheDir uses isolated temp directory (Issue #2)
 func TestFixMissingCacheDir(t *testing.T) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("Failed to get home directory: %v", err)
+	// Create temporary home directory for this test
+	tmpHomeDir := t.TempDir()
+
+	// Save original HOME
+	originalHome := os.Getenv("HOME")
+	defer func() {
+		if originalHome != "" {
+			_ = os.Setenv("HOME", originalHome)
+		}
+	}()
+
+	// Set HOME to temp directory for test isolation
+	if err := os.Setenv("HOME", tmpHomeDir); err != nil {
+		t.Fatalf("Failed to set HOME: %v", err)
 	}
 
-	// Verify cache directory will be created
-	cacheDir := filepath.Join(homeDir, ".erst")
-
-	err = FixMissingCacheDir(false)
+	// Test the fixer
+	err := FixMissingCacheDir(false)
 	if err != nil {
 		t.Fatalf("FixMissingCacheDir failed: %v", err)
 	}
 
-	// Verify cache directory exists
+	// Verify cache directory exists in temp location
+	cacheDir := filepath.Join(tmpHomeDir, ".erst")
 	if _, err := os.Stat(cacheDir); err != nil {
 		t.Fatalf("Cache directory not created: %v", err)
 	}
@@ -40,19 +50,31 @@ func TestFixMissingCacheDir(t *testing.T) {
 	}
 }
 
-// TestFixProtocolRegistration verifies protocol registry creation
+// FIXED: TestFixProtocolRegistration uses isolated temp directory (Issue #2)
 func TestFixProtocolRegistration(t *testing.T) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("Failed to get home directory: %v", err)
+	tmpHomeDir := t.TempDir()
+
+	originalHome := os.Getenv("HOME")
+	defer func() {
+		if originalHome != "" {
+			_ = os.Setenv("HOME", originalHome)
+		}
+	}()
+
+	if err := os.Setenv("HOME", tmpHomeDir); err != nil {
+		t.Fatalf("Failed to set HOME: %v", err)
 	}
 
-	registryFile := filepath.Join(homeDir, ".erst", "protocols", "registered.json")
+	// First create the cache directory
+	_ = FixMissingCacheDir(false)
 
-	err = FixProtocolRegistration(false)
+	// Now test protocol registration
+	err := FixProtocolRegistration(false)
 	if err != nil {
 		t.Fatalf("FixProtocolRegistration failed: %v", err)
 	}
+
+	registryFile := filepath.Join(tmpHomeDir, ".erst", "protocols", "registered.json")
 
 	// Verify registry file exists
 	if _, err := os.Stat(registryFile); err != nil {
@@ -76,32 +98,64 @@ func TestFixProtocolRegistration(t *testing.T) {
 	}
 }
 
-// TestFixGoModDependencies verifies go.mod operations
+// FIXED: TestFixGoModDependencies uses isolated temp module directory (Issue #4)
 func TestFixGoModDependencies(t *testing.T) {
-	// This test requires a valid Go project setup
-	// Skip if go.mod doesn't exist
+	// Check if we're in the main repo
 	_, err := os.Stat("go.mod")
 	if err != nil {
-		t.Skip("go.mod not found, skipping")
+		t.Skip("go.mod not found, skipping - integration test only")
 	}
 
+	// Run in a temp directory to avoid modifying repo
+	tmpDir := t.TempDir()
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+
+	// Write a minimal go.mod so that Go tooling has a valid module context
+	goModPath := filepath.Join(tmpDir, "go.mod")
+	goModContents := []byte("module example.com/tempmod\n\ngo 1.21\n")
+	if err := os.WriteFile(goModPath, goModContents, 0o644); err != nil {
+		t.Fatalf("Failed to write temporary go.mod: %v", err)
+	}
+
+	// Change into temporary directory
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Failed to change to temporary module directory: %v", err)
+	}
+
+	defer func() {
+		_ = os.Chdir(wd)
+	}()
+
+	// Disable network access for Go module operations to keep test deterministic
+	t.Setenv("GOPROXY", "off")
+
+	// Run the fixer - it will fail due to offline mode, which is expected
 	err = FixGoModDependencies(false)
 	if err != nil {
-		t.Logf("FixGoModDependencies info: %v", err)
-		// Don't fail the test as it depends on network access
+		t.Logf("FixGoModDependencies info (expected with GOPROXY=off): %v", err)
+		// Don't fail - this is a unit test with artificial constraints
 	}
 }
 
-// TestConfirmAction verifies prompt helper exists
-func TestConfirmAction(t *testing.T) {
-	// ConfirmAction is an interactive function
-	// This test verifies it's defined and callable
-	// Actual testing requires interactive input which is not practical in unit tests
-	t.Log("ConfirmAction is an interactive function - manual testing recommended")
-}
+// FIXED: Removed duplicate/unused ConfirmAction test (Issue #3)
+// ConfirmAction is now handled internally in runFixers with proper stdin handling
 
 // BenchmarkFixMissingCacheDir measures performance
 func BenchmarkFixMissingCacheDir(b *testing.B) {
+	tmpHomeDir := b.TempDir()
+	originalHome := os.Getenv("HOME")
+
+	_ = os.Setenv("HOME", tmpHomeDir)
+	defer func() {
+		if originalHome != "" {
+			_ = os.Setenv("HOME", originalHome)
+		}
+	}()
+
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = FixMissingCacheDir(false)
 	}
