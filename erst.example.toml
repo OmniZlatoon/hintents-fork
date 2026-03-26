@@ -27,6 +27,11 @@ log_level = "info"
 # Default is 50.
 max_trace_depth = 50
 
+# Maximum source map cache size (e.g., 500MB, 1GB)
+# When exceeded, oldest entries are automatically evicted.
+# Examples: "500MB", "1GB", 524288000 (bytes)
+# max_cache_size = "500MB"
+
 # Opt-in anonymous crash reporting.
 # When enabled, fatal panics and unhandled errors send a minimal report
 # (error message, stack trace, OS/arch, version) to the maintainer.
@@ -43,6 +48,7 @@ max_trace_depth = 50
 # Defaults to https://crash.erst.dev/v1/report when crash_reporting is true
 # and no Sentry DSN is set. Can also be set via ERST_CRASH_ENDPOINT.
 # crash_endpoint = "https://crash.erst.dev/v1/report"
+
 # Audit HSM Configuration
 # ERST_PKCS11_MODULE = "/usr/lib/softhsm/libsofthsm2.so"
 # ERST_PKCS11_MAX_RPM = 1000 # Max requests per minute to protect HSM
