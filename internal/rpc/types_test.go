@@ -442,6 +442,94 @@ func TestScValToGoValue_ContractInstance_StellarAsset(t *testing.T) {
 	assert.Empty(t, ci.WasmHash)
 }
 
+func TestScValToGoValue_ContractInstance_WithStorage(t *testing.T) {
+	sm := xdr.ScMap{
+		{Key: xdr.ScVal{Type: xdr.ScValTypeScvString, Str: strPtr("k")},
+			Val: xdr.ScVal{Type: xdr.ScValTypeScvU32, U32: u32Ptr(7)}},
+	}
+	v := xdr.ScVal{
+		Type: xdr.ScValTypeScvContractInstance,
+		Instance: &xdr.ScContractInstance{
+			Executable: xdr.ContractExecutable{
+				Type: xdr.ContractExecutableTypeContractExecutableStellarAsset,
+			},
+			Storage: &sm,
+		},
+	}
+	got, err := ScValToGoValue(v)
+	require.NoError(t, err)
+	ci := got.(*ScValContractInstance)
+	require.Len(t, ci.Storage, 1)
+	assert.Equal(t, "k", ci.Storage[0].Key)
+	assert.Equal(t, uint32(7), ci.Storage[0].Value)
+}
+
+func TestScValToGoValue_ContractInstance_Nil(t *testing.T) {
+	v := xdr.ScVal{Type: xdr.ScValTypeScvContractInstance, Instance: nil}
+	got, err := ScValToGoValue(v)
+	require.NoError(t, err)
+	assert.Nil(t, got)
+}
+
+func TestScValToGoValue_ContractInstance_UnsupportedExecutable(t *testing.T) {
+	v := xdr.ScVal{
+		Type: xdr.ScValTypeScvContractInstance,
+		Instance: &xdr.ScContractInstance{
+			Executable: xdr.ContractExecutable{
+				Type: xdr.ContractExecutableType(999),
+			},
+		},
+	}
+	_, err := ScValToGoValue(v)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported ContractExecutable type")
+}
+
+func TestScValToGoValue_Address_UnsupportedType(t *testing.T) {
+	// ScAddress with an unsupported type should propagate an error
+	addr := xdr.ScAddress{
+		Type: xdr.ScAddressType(999),
+	}
+	v := xdr.ScVal{Type: xdr.ScValTypeScvAddress, Address: &addr}
+	_, err := ScValToGoValue(v)
+	require.Error(t, err)
+}
+func TestScValToGoValue_Vec_ErrorPropagation(t *testing.T) {
+	// A vec containing an element with an unsupported type should return an error
+	sv := xdr.ScVec{{Type: xdr.ScValType(9999)}}
+	svp := &sv
+	v := xdr.ScVal{Type: xdr.ScValTypeScvVec, Vec: &svp}
+	_, err := ScValToGoValue(v)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "vec element 0")
+}
+
+func TestScValToGoValue_Map_ErrorPropagation(t *testing.T) {
+	// A map with a bad key type should return an error
+	sm := xdr.ScMap{
+		{Key: xdr.ScVal{Type: xdr.ScValType(9999)},
+			Val: xdr.ScVal{Type: xdr.ScValTypeScvVoid}},
+	}
+	smp := &sm
+	v := xdr.ScVal{Type: xdr.ScValTypeScvMap, Map: &smp}
+	_, err := ScValToGoValue(v)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "map entry 0 key")
+}
+
+func TestScValToGoValue_Map_ErrorPropagation_Value(t *testing.T) {
+	// A map with a bad value type should return an error
+	sm := xdr.ScMap{
+		{Key: xdr.ScVal{Type: xdr.ScValTypeScvVoid},
+			Val: xdr.ScVal{Type: xdr.ScValType(9999)}},
+	}
+	smp := &sm
+	v := xdr.ScVal{Type: xdr.ScValTypeScvMap, Map: &smp}
+	_, err := ScValToGoValue(v)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "map entry 0 value")
+}
+
 // ---- Requirement 7: nil-pointer safety --------------------------------------
 
 func TestScValToGoValue_NilBool(t *testing.T) {
@@ -547,6 +635,82 @@ func TestScValToGoValue_NilNonce(t *testing.T) {
 	got, err := ScValToGoValue(v)
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), got)
+}
+
+// ---- ScvAddress -------------------------------------------------------------
+
+func TestScValToGoValue_Address_Account(t *testing.T) {
+	// Build a valid AccountId from a 32-byte Ed25519 public key
+	var raw [32]byte
+	for i := range raw {
+		raw[i] = byte(i + 1)
+	}
+	var ui xdr.Uint256
+	copy(ui[:], raw[:])
+	aid, err := xdr.NewAccountId(xdr.PublicKeyTypePublicKeyTypeEd25519, ui)
+	require.NoError(t, err)
+
+	addr := xdr.ScAddress{
+		Type:      xdr.ScAddressTypeScAddressTypeAccount,
+		AccountId: &aid,
+	}
+	v := xdr.ScVal{Type: xdr.ScValTypeScvAddress, Address: &addr}
+	got, err := ScValToGoValue(v)
+	require.NoError(t, err)
+	// Result should be a non-empty G-address string
+	s, ok := got.(string)
+	require.True(t, ok)
+	assert.NotEmpty(t, s)
+	assert.True(t, s[0] == 'G', "expected G-address, got %s", s)
+}
+
+func TestScValToGoValue_Address_Nil(t *testing.T) {
+	v := xdr.ScVal{Type: xdr.ScValTypeScvAddress, Address: nil}
+	got, err := ScValToGoValue(v)
+	require.NoError(t, err)
+	assert.Equal(t, "", got)
+}
+
+// ---- ScvError with ContractCode arm -----------------------------------------
+
+func TestScValToGoValue_Error_ContractCode(t *testing.T) {
+	cc := xdr.Uint32(42)
+	v := xdr.ScVal{
+		Type: xdr.ScValTypeScvError,
+		Error: &xdr.ScError{
+			Type:         xdr.ScErrorTypeSceContract,
+			ContractCode: &cc,
+		},
+	}
+	got, err := ScValToGoValue(v)
+	require.NoError(t, err)
+	se := got.(ScValError)
+	assert.Equal(t, uint32(xdr.ScErrorTypeSceContract), se.Type)
+	assert.Equal(t, uint32(42), se.Code)
+}
+
+func TestScValToGoValue_Error_Nil(t *testing.T) {
+	v := xdr.ScVal{Type: xdr.ScValTypeScvError, Error: nil}
+	got, err := ScValToGoValue(v)
+	require.NoError(t, err)
+	se := got.(ScValError)
+	assert.Equal(t, uint32(0), se.Type)
+	assert.Equal(t, uint32(0), se.Code)
+}
+
+func TestScValToGoValue_Error_NilCode(t *testing.T) {
+	// ScError with no Code or ContractCode set — scErrorCode should return 0
+	v := xdr.ScVal{
+		Type: xdr.ScValTypeScvError,
+		Error: &xdr.ScError{
+			Type: xdr.ScErrorTypeSceWasmVm,
+			// Code is nil intentionally
+		},
+	}
+	got, err := ScValToGoValue(v)
+	require.NoError(t, err)
+	se := got.(ScValError)
+	assert.Equal(t, uint32(0), se.Code)
 }
 
 // ---- Requirement 8: unsupported type ----------------------------------------
