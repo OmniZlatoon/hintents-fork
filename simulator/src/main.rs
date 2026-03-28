@@ -4,6 +4,7 @@
 #![allow(warnings, clippy::all, clippy::pedantic, clippy::nursery)]
 
 mod config;
+mod context;
 mod debug_host_fn;
 mod gas_optimizer;
 mod git_detector;
@@ -398,6 +399,9 @@ fn main() {
         }
     };
 
+    let mut harness_ctx = context::HarnessContext::default();
+    let harness_logs = harness_ctx.apply_control_command(&request);
+
     let envelope = match base64::engine::general_purpose::STANDARD.decode(&request.envelope_xdr) {
         Ok(bytes) => match soroban_env_host::xdr::TransactionEnvelope::from_xdr(
             bytes,
@@ -706,6 +710,7 @@ fn main() {
                 format!("CPU Instructions Used: {}", cpu_insns),
                 format!("Memory Bytes Used: {}", mem_bytes),
             ];
+            final_logs.extend(harness_logs.clone());
             let contract_debug_logs: Vec<String> = match host.get_events() {
                 Ok(ref evs) => debug_host_fn::extract_debug_logs(evs)
                     .into_iter()
@@ -906,7 +911,11 @@ fn main() {
                 events: vec![],
                 diagnostic_events: vec![],
                 categorized_events: vec![],
-                logs: vec![format!("Stack trace:\n{}", trace_display)],
+                logs: {
+                    let mut logs = vec![format!("Stack trace:\n{}", trace_display)];
+                    logs.extend(harness_logs.clone());
+                    logs
+                },
                 flamegraph: None,
                 optimization_report: None,
                 budget_usage: None,
@@ -951,7 +960,11 @@ fn main() {
                 events: vec![],
                 diagnostic_events: vec![],
                 categorized_events: vec![],
-                logs: vec![format!("PANIC: {}", panic_msg)],
+                logs: {
+                    let mut logs = vec![format!("PANIC: {}", panic_msg)];
+                    logs.extend(harness_logs.clone());
+                    logs
+                },
                 flamegraph: None,
                 optimization_report: None,
                 budget_usage: None,
