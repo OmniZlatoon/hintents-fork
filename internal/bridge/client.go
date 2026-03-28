@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 )
 
 // ipcRequest is a minimal view of the simulator.SimulationRequest used for
@@ -58,4 +59,96 @@ func CompressRequest(reqJSON []byte) ([]byte, error) {
 		return nil, fmt.Errorf("bridge: re-marshal compressed request: %w", err)
 	}
 	return out, nil
+}
+
+// ---------------------------------------------------------------------------
+// FETCH_SNAPSHOT command — bidirectional IPC (Go bridge → simulator → Go)
+// ---------------------------------------------------------------------------
+
+// CommandOpcode identifies the command sent to the simulator over stdin.
+type CommandOpcode string
+
+const (
+	// OpFetchSnapshot requests one or more snapshot frames by sequence ID.
+	// The simulator responds with a "fetch_response" NDJSON frame on stdout.
+	OpFetchSnapshot CommandOpcode = "FETCH_SNAPSHOT"
+)
+
+// fetchSnapshotRequest is the JSON payload written to the simulator's stdin.
+//
+// Wire format:
+//
+//	{"op":"FETCH_SNAPSHOT","id":3,"batch_size":5}
+type fetchSnapshotRequest struct {
+	Op        CommandOpcode `json:"op"`
+	ID        uint32        `json:"id"`
+	BatchSize uint32        `json:"batch_size,omitempty"`
+}
+
+// SnapshotEntry is one snapshot frame inside a FetchSnapshotResponse.
+type SnapshotEntry struct {
+	// Seq is the original sequence number of this snapshot.
+	Seq uint32 `json:"seq"`
+	// Data is the raw ledger snapshot payload.
+	Data json.RawMessage `json:"data"`
+}
+
+// FetchSnapshotResponse is the parsed payload of a "fetch_response" frame
+// emitted by the simulator on stdout.
+//
+// Wire format:
+//
+//	{"type":"fetch_response","seq":3,"data":{"snapshots":[...]}}
+type FetchSnapshotResponse struct {
+	FrameType string `json:"type"`
+	// Seq echoes the requested starting sequence ID.
+	Seq  uint32 `json:"seq"`
+	Data struct {
+		Snapshots []SnapshotEntry `json:"snapshots"`
+	} `json:"data"`
+}
+
+// FetchSnapshot sends a FETCH_SNAPSHOT command for a single frame to the
+// simulator's stdin pipe w.
+//
+// The caller is responsible for reading the corresponding "fetch_response"
+// frame from the simulator's stdout stream.
+func FetchSnapshot(w io.Writer, id uint32) error {
+	return writeCommand(w, fetchSnapshotRequest{
+		Op:        OpFetchSnapshot,
+		ID:        id,
+		BatchSize: 1,
+	})
+}
+
+// FetchSnapshotBatch sends a FETCH_SNAPSHOT command requesting up to count
+// consecutive frames starting at id.
+//
+// The simulator caps batch_size at 5; requesting more is safe but the response
+// will contain at most 5 entries.
+//
+// The caller is responsible for reading the corresponding "fetch_response"
+// frame from the simulator's stdout stream.
+func FetchSnapshotBatch(w io.Writer, id uint32, count uint32) error {
+	if count == 0 {
+		count = 1
+	}
+	return writeCommand(w, fetchSnapshotRequest{
+		Op:        OpFetchSnapshot,
+		ID:        id,
+		BatchSize: count,
+	})
+}
+
+// writeCommand serialises cmd to a single NDJSON line and writes it to w.
+func writeCommand(w io.Writer, cmd fetchSnapshotRequest) error {
+	b, err := json.Marshal(cmd)
+	if err != nil {
+		return fmt.Errorf("bridge: marshal command: %w", err)
+	}
+	b = append(b, '\n')
+	if _, err := w.Write(b); err != nil {
+		return fmt.Errorf("bridge: write command to simulator stdin: %w", err)
+	}
+	return nil
 }
