@@ -158,6 +158,28 @@ func FetchContractBytecode(ctx context.Context, c *Client, contractIDStr string)
 	return entries, nil
 }
 
+func fetchContractCodeEntry(ctx context.Context, c *Client, codeHash xdr.Hash) (string, string, error) {
+	codeKey := xdr.LedgerKey{
+		Type:         xdr.LedgerEntryTypeContractCode,
+		ContractCode: &xdr.LedgerKeyContractCode{Hash: codeHash},
+	}
+	codeKeyB64, err := EncodeLedgerKey(codeKey)
+	if err != nil {
+		return "", "", fmt.Errorf("encode code key: %w", err)
+	}
+
+	codeEntries, err := c.GetLedgerEntries(ctx, []string{codeKeyB64})
+	if err != nil {
+		return "", "", fmt.Errorf("get ledger entries (code): %w", err)
+	}
+	codeEntry, ok := codeEntries[codeKeyB64]
+	if !ok || codeEntry == "" {
+		return "", "", fmt.Errorf("contract code not found for hash %x", codeHash)
+	}
+
+	return codeKeyB64, codeEntry, nil
+}
+
 // WasmBytesFromContractCodeEntry parses a base64-encoded ContractCode ledger entry
 // and returns the raw WASM bytecode.
 func WasmBytesFromContractCodeEntry(entryXDR string) ([]byte, error) {
@@ -361,17 +383,66 @@ func FetchBytecodeForTraceContractCalls(ctx context.Context, c *Client, contract
 			continue
 		}
 		seen[id] = struct{}{}
-		// We could check existingMap for an entry that matches this contract's code, but that would
-		// require parsing; simpler to always call FetchContractBytecode which uses the client cache.
+		if existingMap == nil {
+			existingMap = make(map[string]string)
+		}
+
+		cid, err := decodeContractID(id)
+		if err != nil {
+			logger.Logger.Warn("Failed to decode contract id for trace", "contract_id", id, "error", err)
+			continue
+		}
+		instanceKey, err := LedgerKeyForContractInstance(cid)
+		if err != nil {
+			logger.Logger.Warn("Failed to build contract instance key for trace", "contract_id", id, "error", err)
+			continue
+		}
+		instanceKeyB64, err := EncodeLedgerKey(instanceKey)
+		if err != nil {
+			logger.Logger.Warn("Failed to encode contract instance key for trace", "contract_id", id, "error", err)
+			continue
+		}
+
+		if instanceEntry, ok := existingMap[instanceKeyB64]; ok && instanceEntry != "" {
+			codeHash, err := ContractCodeHashFromInstanceEntry(instanceEntry)
+			if err != nil {
+				logger.Logger.Warn("Failed to derive contract code hash from existing replay state", "contract_id", id, "error", err)
+				continue
+			}
+
+			codeKey := xdr.LedgerKey{
+				Type:         xdr.LedgerEntryTypeContractCode,
+				ContractCode: &xdr.LedgerKeyContractCode{Hash: codeHash},
+			}
+			codeKeyB64, err := EncodeLedgerKey(codeKey)
+			if err != nil {
+				logger.Logger.Warn("Failed to encode contract code key for trace", "contract_id", id, "error", err)
+				continue
+			}
+			if codeEntry, ok := existingMap[codeKeyB64]; ok && codeEntry != "" {
+				continue
+			}
+
+			codeKeyB64, codeEntry, err := fetchContractCodeEntry(ctx, c, codeHash)
+			if err != nil {
+				logger.Logger.Warn("Failed to fetch missing contract code for trace", "contract_id", id, "error", err)
+				continue
+			}
+			if _, ok := existingMap[codeKeyB64]; !ok || existingMap[codeKeyB64] == "" {
+				existingMap[codeKeyB64] = codeEntry
+			}
+			continue
+		}
+
 		fetched, err := FetchContractBytecode(ctx, c, id)
 		if err != nil {
 			logger.Logger.Warn("Failed to fetch contract bytecode for trace", "contract_id", id, "error", err)
 			continue
 		}
-		if existingMap == nil {
-			existingMap = make(map[string]string)
-		}
 		for k, v := range fetched {
+			if _, ok := existingMap[k]; ok && existingMap[k] != "" {
+				continue
+			}
 			existingMap[k] = v
 		}
 	}
