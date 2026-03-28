@@ -95,6 +95,26 @@ func DecodeDiagnosticEvents(events []simulator.DiagnosticEvent) (*CallNode, erro
 		}
 
 		if isFunctionCall(decoded) {
+			if maxDepth > 0 && currentDepth >= maxDepth {
+				// Depth limit reached. Truncate this branch.
+				// Add a warning event to the current node if not already present
+				hasWarning := false
+				for _, e := range current.Events {
+					if e.Topics[0] == "warning" && e.Data == "Max trace depth reached; branch truncated" {
+						hasWarning = true
+						break
+					}
+				}
+				if !hasWarning {
+					current.Events = append(current.Events, DecodedEvent{
+						ContractID: "SYSTEM",
+						Topics:     []string{"warning"},
+						Data:       "Max trace depth reached; branch truncated",
+					})
+				}
+				continue
+			}
+
 			child := &CallNode{
 				ContractID: decoded.ContractID,
 				Function:   extractFunctionName(decoded),
@@ -110,20 +130,28 @@ func DecodeDiagnosticEvents(events []simulator.DiagnosticEvent) (*CallNode, erro
 			current = child
 			current.Events = append(current.Events, decoded)
 		} else if isFunctionReturn(decoded) {
+			if maxDepth > 0 && currentDepth >= maxDepth {
+				// We skipped the corresponding call, so we must skip the return.
+				continue
+			}
+
 			returnedFn := extractFunctionName(decoded)
 			if current.Function != returnedFn && current.Function != "TOP_LEVEL" {
 				iter := current.parent
 				found := false
+				tempDepth := currentDepth - 1
 				for iter != nil {
 					if iter.Function == returnedFn {
 						found = true
 						break
 					}
 					iter = iter.parent
+					tempDepth--
 				}
 				if found {
 					for current != iter {
 						current = current.parent
+						currentDepth--
 					}
 				}
 			}
