@@ -228,6 +228,8 @@ func (v *InteractiveViewer) handleCommand(command string) bool {
 	case "q", "quit", "exit":
 		fmt.Printf("Goodbye! %s\n", visualizer.Symbol("wave"))
 		return true
+	case "0", "rewind":
+		v.rewindToStart()
 	case "y", "yank", "copy":
 		if len(parts) > 1 {
 			v.handleYank(parts[1:])
@@ -239,6 +241,27 @@ func (v *InteractiveViewer) handleCommand(command string) bool {
 	}
 
 	return false
+}
+
+// rewindToStart resets the viewer to step 0, clearing filters and search state.
+func (v *InteractiveViewer) rewindToStart() {
+	if len(v.trace.States) == 0 {
+		fmt.Printf("%s No states to rewind to\n", visualizer.Error())
+		return
+	}
+
+	v.trace.CurrentStep = 0
+	v.eventFilter = ""
+
+	state, err := v.trace.GetCurrentState()
+	if err != nil {
+		fmt.Printf("%s %s\n", visualizer.Error(), err)
+		return
+	}
+
+	fmt.Printf("%s Rewound to step 0\n", visualizer.Symbol("target"))
+	_ = state
+	v.displayCurrentState()
 }
 
 // stepForward moves to the next step, respecting the event filter and hideStdLib toggle.
@@ -764,6 +787,7 @@ func (v *InteractiveViewer) showHelp() {
 	fmt.Println("  b, p, prev, back        - Step backward")
 	fmt.Println("  j, jump <step>          - Jump to specific step")
 	fmt.Println("  $, G                    - Jump to final instruction (last step)")
+	fmt.Println("  0, rewind               - Rewind to beginning (step 0)")
 	fmt.Println()
 	fmt.Println("Display:")
 	fmt.Println("  s, show, state          - Show current state")
