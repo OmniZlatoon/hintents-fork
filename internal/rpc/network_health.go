@@ -34,6 +34,39 @@ type HealthReport struct {
 	Network     string            `json:"network"`
 }
 
+// GetHealthReport returns a snapshot of health telemetry for all known RPC nodes.
+func (c *Client) GetHealthReport() *HealthReport {
+	if c.healthCollector == nil {
+		return &HealthReport{
+			Nodes:       []NodeHealthStats{},
+			GeneratedAt: time.Now(),
+			Network:     c.GetNetworkName(),
+		}
+	}
+
+	stats := c.healthCollector.GetAllStats()
+
+	// Include current circuit breaker state from client failure tracking.
+	c.mu.RLock()
+	for i := range stats {
+		stats[i].CircuitOpen = !c.isHealthyLocked(stats[i].URL)
+	}
+	c.mu.RUnlock()
+
+	return &HealthReport{
+		Nodes:       stats,
+		GeneratedAt: time.Now(),
+		Network:     c.GetNetworkName(),
+	}
+}
+
+// recordTelemetry records request telemetry when health collection is enabled.
+func (c *Client) recordTelemetry(url string, latency time.Duration, success bool) {
+	if c.healthCollector != nil {
+		c.healthCollector.RecordRequest(url, latency, success)
+	}
+}
+
 // HealthCollector manages background telemetry collection for RPC nodes.
 type HealthCollector struct {
 	mu         sync.RWMutex

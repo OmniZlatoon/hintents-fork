@@ -268,6 +268,16 @@ func (c *Client) getLedgerEntriesAttempt(ctx context.Context, keysToFetch []stri
 	// Always use the dedicated Soroban RPC URL for getLedgerEntries; this is a
 	// Soroban JSON-RPC method and is not served by the Horizon REST API.
 	targetURL := c.SorobanURL
+	if targetURL == "" {
+		switch c.Network {
+		case Testnet:
+			targetURL = TestnetSorobanURL
+		case Mainnet:
+			targetURL = MainnetSorobanURL
+		case Futurenet:
+			targetURL = FuturenetSorobanURL
+		}
+	}
 
 	timer := c.startMethodTimer(ctx, "rpc.get_ledger_entries", map[string]string{
 		"network": c.GetNetworkName(),
@@ -453,6 +463,16 @@ func (c *Client) simulateTransactionAttempt(ctx context.Context, envelopeXdr str
 	// Always use the dedicated Soroban RPC URL for simulateTransaction; this is a
 	// Soroban JSON-RPC method and is not served by the Horizon REST API.
 	targetURL := c.SorobanURL
+	if targetURL == "" {
+		switch c.Network {
+		case Testnet:
+			targetURL = TestnetSorobanURL
+		case Mainnet:
+			targetURL = MainnetSorobanURL
+		case Futurenet:
+			targetURL = FuturenetSorobanURL
+		}
+	}
 
 	timer := c.startMethodTimer(ctx, "rpc.simulate_transaction", map[string]string{
 		"network": c.GetNetworkName(),
@@ -463,9 +483,11 @@ func (c *Client) simulateTransactionAttempt(ctx context.Context, envelopeXdr str
 	}()
 
 	logger.Logger.Debug("Simulating transaction (preflight)", "url", targetURL)
+	startTime := time.Now()
 
 	// Fail fast if circuit breaker is open for this Soroban endpoint.
 	if !c.isHealthy(targetURL) {
+		c.recordTelemetry(targetURL, time.Since(startTime), false)
 		return nil, errors.WrapRPCConnectionFailed(
 			fmt.Errorf("circuit breaker open for %s", targetURL),
 		)
@@ -495,34 +517,41 @@ func (c *Client) simulateTransactionAttempt(ctx context.Context, envelopeXdr str
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.getHTTPClient().Do(req)
+	duration := time.Since(startTime)
 	if err != nil {
 		logger.Logger.Error("Soroban simulateTransaction request failed", "url", targetURL, "error", err)
+		c.recordTelemetry(targetURL, duration, false)
 		return nil, errors.WrapRPCConnectionFailed(err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusRequestEntityTooLarge {
 		logger.Logger.Error("Soroban simulateTransaction response too large", "url", targetURL, "status", resp.StatusCode)
+		c.recordTelemetry(targetURL, duration, false)
 		return nil, errors.WrapRPCResponseTooLarge(targetURL)
 	}
 
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		logger.Logger.Error("Soroban simulateTransaction response read failed", "url", targetURL, "error", err)
+		c.recordTelemetry(targetURL, duration, false)
 		return nil, errors.WrapUnmarshalFailed(err, "body read error")
 	}
 
 	var rpcResp SimulateTransactionResponse
 	if err := json.Unmarshal(respBytes, &rpcResp); err != nil {
 		logger.Logger.Error("Soroban simulateTransaction unmarshal failed", "url", targetURL, "error", err)
+		c.recordTelemetry(targetURL, duration, false)
 		return nil, errors.WrapUnmarshalFailed(err, string(respBytes))
 	}
 
 	if rpcResp.Error != nil {
 		logger.Logger.Error("Soroban simulateTransaction RPC error", "url", targetURL, "code", rpcResp.Error.Code, "message", rpcResp.Error.Message)
+		c.recordTelemetry(targetURL, duration, false)
 		return nil, errors.WrapSorobanError(targetURL, rpcResp.Error.Message, rpcResp.Error.Code)
 	}
 
+	c.recordTelemetry(targetURL, duration, true)
 	logger.Logger.Debug("Soroban simulateTransaction succeeded", "url", targetURL)
 	return &rpcResp, nil
 }
@@ -585,6 +614,12 @@ func (c *Client) getHealthAttempt(ctx context.Context) (healthResp *GetHealthRes
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
 		return nil, errors.NewRPCError(errors.CodeRPCMarshalFailed, err)
+	}
+
+	// Prefer SorobanURL but fall back to current HorizonURL so failovers are reflected.
+	targetURL = c.SorobanURL
+	if targetURL == "" {
+		targetURL = c.HorizonURL
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", targetURL, bytes.NewBuffer(bodyBytes))

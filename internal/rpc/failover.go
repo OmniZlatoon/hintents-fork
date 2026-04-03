@@ -117,11 +117,35 @@ func (c *Client) rotateURL() bool {
 
 	currentURL := c.AltURLs[c.currIndex]
 
+	// Build list of healthy candidates excluding current URL.
 	// Build candidate list excluding current URL.
 	candidates := make([]string, 0, len(c.AltURLs)-1)
 	for _, url := range c.AltURLs {
 		if url != currentURL && c.isHealthyLocked(url) {
 			candidates = append(candidates, url)
+		}
+	}
+
+	// If we have health telemetry, prefer the healthiest candidate.
+	if len(candidates) > 0 && c.healthCollector != nil {
+		bestURL := c.healthCollector.GetHealthiestURL(candidates)
+		if bestURL != "" {
+			for i, url := range c.AltURLs {
+				if url == bestURL {
+					c.currIndex = i
+					break
+				}
+			}
+		} else {
+			c.currIndex = (c.currIndex + 1) % len(c.AltURLs)
+		}
+	} else {
+		// Fall back to round-robin, preferring healthy endpoints when possible.
+		for i := 0; i < len(c.AltURLs); i++ {
+		c.currIndex = (c.currIndex + 1) % len(c.AltURLs)
+		url := c.AltURLs[c.currIndex]
+		if c.isHealthyLocked(url) {
+			break
 		}
 	}
 
@@ -142,6 +166,7 @@ func (c *Client) rotateURL() bool {
 		}
 	} else {
 		c.currIndex = (c.currIndex + 1) % len(c.AltURLs)
+	}
 	}
 
 	c.HorizonURL = c.AltURLs[c.currIndex]

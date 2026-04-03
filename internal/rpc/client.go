@@ -264,6 +264,7 @@ func (c *Client) getTransactionAttempt(ctx context.Context, hash string) (txResp
 		span.RecordError(err)
 		// Record failed remote node response
 		metrics.RecordRemoteNodeResponse(c.HorizonURL, string(c.Network), false, time.Since(startTime))
+		c.recordTelemetry(c.HorizonURL, time.Since(startTime), false)
 		return nil, errors.WrapRPCConnectionFailed(err)
 	}
 
@@ -279,8 +280,11 @@ func (c *Client) getTransactionAttempt(ctx context.Context, hash string) (txResp
 
 		// Check if it's a 404 (Transaction Not Found)
 		if hErr, ok := err.(*horizonclient.Error); ok && hErr.Problem.Status == 404 {
+			c.recordTelemetry(c.HorizonURL, duration, true)
 			return nil, errors.WrapTransactionNotFound(err)
 		}
+
+		c.recordTelemetry(c.HorizonURL, duration, false)
 
 		return nil, errors.WrapRPCConnectionFailed(err)
 	}
