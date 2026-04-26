@@ -48,11 +48,11 @@ func TestClosestStringMatch(t *testing.T) {
 }
 
 func TestResourceNotFoundError(t *testing.T) {
-	if got := resourceNotFoundError("abc123").Error(); got != "Resource not found. Did you mean abc123?" {
+	if got := resourceNotFoundError("abc123").Error(); got != "resource not found; did you mean abc123?" {
 		t.Fatalf("unexpected suggestion message: %q", got)
 	}
 
-	if got := resourceNotFoundError("").Error(); got != "Resource not found." {
+	if got := resourceNotFoundError("").Error(); got != "resource not found" {
 		t.Fatalf("unexpected no-suggestion message: %q", got)
 	}
 }

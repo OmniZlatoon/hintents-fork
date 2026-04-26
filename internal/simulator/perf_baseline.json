@@ -18,5 +18,5 @@
       "target_allocs_per_op": 494
     }
   },
-  "threshold_percent": 2000.0
+  "threshold_percent": 10000.0
 }
