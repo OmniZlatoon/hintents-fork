@@ -740,7 +740,7 @@ mod tests {
         std::env::set_var("ERST_PKCS11_PIN", "123456");
 
         let config = Pkcs11SignerConfig::from_env();
-        
+
         // Clean up immediately after reading from env to minimize window
         std::env::remove_var("ERST_PKCS11_MODULE");
         std::env::remove_var("ERST_PKCS11_PIN");
