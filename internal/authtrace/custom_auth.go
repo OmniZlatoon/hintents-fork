@@ -211,14 +211,14 @@ func mapCustomAuthError(err error) error {
 	msg := err.Error()
 	code := extractCustomAuthCode(msg)
 	if code == "" {
-		return fmt.Errorf("Authorization failed: %s", msg)
+		return fmt.Errorf("authorization failed: %s", msg)
 	}
 
 	if readable, ok := customAuthErrorMessages[code]; ok {
 		return fmt.Errorf("%s", readable)
 	}
 
-	return fmt.Errorf("Authorization failed: unknown custom auth error (%s)", code)
+	return fmt.Errorf("authorization failed: unknown custom auth error (%s)", code)
 }
 
 func extractCustomAuthCode(msg string) string {
