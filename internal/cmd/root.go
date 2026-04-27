@@ -76,10 +76,9 @@ Get started with 'erst debug --help' or visit the documentation.`,
 
 		return nil
 	},
-	SilenceUsage:     true,
-	SilenceErrors:    true,
-	Version:          Version,
-	TraverseChildren: true,
+	SilenceUsage:  true,
+	SilenceErrors: true,
+	Version:       Version,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
