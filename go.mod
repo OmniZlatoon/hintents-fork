@@ -11,16 +11,16 @@ require (
 	github.com/gorilla/rpc v1.2.1
 	github.com/hashicorp/go-version v1.8.0
 	github.com/klauspost/compress v1.18.0
-	github.com/mattn/go-isatty v0.0.20
+	github.com/mattn/go-isatty v0.0.21
 	github.com/prometheus/client_golang v1.23.2
 	github.com/spf13/cobra v1.10.2
-	github.com/stellar/go v0.0.0-20251210100531-aab2ea4aca88
+	github.com/stellar/go-stellar-sdk v0.5.0
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel v1.42.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.28.0
-	go.opentelemetry.io/otel/sdk v1.37.0
+	go.opentelemetry.io/otel/sdk v1.39.0
 	go.opentelemetry.io/otel/trace v1.42.0
-	modernc.org/sqlite v1.44.3
+	modernc.org/sqlite v1.50.0
 	pgregory.net/rapid v1.2.0
 )
 
@@ -51,7 +51,7 @@ require (
 	github.com/segmentio/go-loggly v0.5.1-0.20171222203950-eb91657e62b2 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/stellar/go-xdr v0.0.0-20260312225820-cc2b0611aabf // indirect
+	github.com/stellar/go-xdr v0.0.0-20260423131911-a87d4d0789c3 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.28.0 // indirect
@@ -59,15 +59,15 @@ require (
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546 // indirect
-	golang.org/x/net v0.47.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250929231259-57b25ae835d4 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250929231259-57b25ae835d4 // indirect
-	google.golang.org/grpc v1.75.1 // indirect
-	google.golang.org/protobuf v1.36.10 // indirect
+	golang.org/x/net v0.53.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260120221211-b8f7ae30c516 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260420184626-e10c466a9529 // indirect
+	google.golang.org/grpc v1.80.0 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	modernc.org/libc v1.67.6 // indirect
+	modernc.org/libc v1.72.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )

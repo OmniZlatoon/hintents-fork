@@ -8,7 +8,7 @@ import (
 )
 
 func TestTrackerRecordEvent(t *testing.T) {
-	tracker := NewTracker(AuthTraceConfig{MaxEventDepth: 100})
+	tracker := NewTracker(Config{MaxEventDepth: 100})
 
 	event := AuthEvent{
 		EventType:     "signature_verification",
@@ -28,7 +28,7 @@ func TestTrackerRecordEvent(t *testing.T) {
 }
 
 func TestTrackerSignatureVerification(t *testing.T) {
-	tracker := NewTracker(AuthTraceConfig{})
+	tracker := NewTracker(Config{})
 
 	signers := []SignerInfo{
 		{AccountID: "GTEST", SignerKey: "key1", SignerType: Ed25519, Weight: 1},
@@ -45,7 +45,7 @@ func TestTrackerSignatureVerification(t *testing.T) {
 }
 
 func TestTrackerThresholdCheck(t *testing.T) {
-	tracker := NewTracker(AuthTraceConfig{})
+	tracker := NewTracker(Config{})
 
 	tracker.RecordThresholdCheck("GTEST", 2, 1, false)
 
@@ -59,7 +59,7 @@ func TestTrackerThresholdCheck(t *testing.T) {
 }
 
 func TestTrackerClear(t *testing.T) {
-	tracker := NewTracker(AuthTraceConfig{})
+	tracker := NewTracker(Config{})
 
 	event := AuthEvent{EventType: "test", Status: "valid"}
 	tracker.RecordEvent(event)
@@ -175,7 +175,7 @@ func TestCustomContractAuthValidatorValidate(t *testing.T) {
 
 	signers := map[string]uint32{"key1": 1}
 	auth := NewMultiSigContractAuth(1, 1, signers)
-	validator.RegisterContract("contract1", auth)
+	_ = validator.RegisterContract("contract1", auth)
 
 	params := []interface{}{map[string]interface{}{
 		"signatures": []interface{}{map[string]interface{}{"signer_key": "key1"}},

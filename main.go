@@ -5,10 +5,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"runtime/debug"
 
@@ -26,6 +24,7 @@ var (
 
 // ─── Example RPC handler ──────────────────────────────────────────────────────
 
+/*
 func rpcHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -39,6 +38,7 @@ func healthzHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprint(w, "ok")
 }
+*/
 
 func main() {
 	ctx := context.Background()
@@ -77,10 +77,10 @@ func main() {
 func run(execute func() error, stderr io.Writer) int {
 	if err := execute(); err != nil {
 		if cmd.IsInterrupted(err) {
-			fmt.Fprintln(stderr, "Interrupted. Shutting down...")
+			_, _ = fmt.Fprintln(stderr, "Interrupted. Shutting down...")
 			return cmd.InterruptExitCode
 		}
-		fmt.Fprintf(stderr, "Error: %v\n", err)
+		_, _ = fmt.Fprintf(stderr, "Error: %v\n", err)
 		return 1
 	}
 	return 0

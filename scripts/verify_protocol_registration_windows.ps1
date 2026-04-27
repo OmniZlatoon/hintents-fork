@@ -23,8 +23,14 @@ if ([string]::IsNullOrWhiteSpace($command)) {
     throw 'Missing default protocol open command'
 }
 
-if ($env:ERST_BINARY -and $command -notlike "*$($env:ERST_BINARY)*") {
-    throw "Protocol command does not reference expected binary: $($env:ERST_BINARY)"
+if ($env:ERST_BINARY) {
+    # Normalize paths to use forward slashes for cross-platform comparison
+    $normalizedCommand = $command.Replace('\', '/')
+    $normalizedBinary = $env:ERST_BINARY.Replace('\', '/')
+    
+    if ($normalizedCommand -notlike "*$normalizedBinary*") {
+        throw "Protocol command does not reference expected binary: $normalizedBinary (got $normalizedCommand)"
+    }
 }
 
 if ($command -notlike '*protocol-handler*') {

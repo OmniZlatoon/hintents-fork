@@ -1,8 +1,7 @@
 // Copyright 2026 Erst Users
 // SPDX-License-Identifier: Apache-2.0
 
-#![allow(warnings, clippy::all, clippy::pedantic, clippy::nursery)]
-
+#![allow(clippy::pedantic, clippy::nursery)]
 mod config;
 mod context;
 mod debug_host_fn;
@@ -26,7 +25,6 @@ use crate::types::*;
 use base64::Engine as _;
 use soroban_env_host::xdr::{ReadXdr, WriteXdr};
 use soroban_env_host::{
-    events::{Events, HostEvent},
     xdr::{Operation, OperationBody},
     Host, HostError,
 };
@@ -113,18 +111,18 @@ fn generate_lcov_report(coverage: &CoverageTracker, source_file: &str) -> String
         .iter()
         .map(|(name, count)| (name.as_str(), *count))
         .collect();
-    functions.sort_by(|(a, _), (b, _)| a.cmp(b));
+    functions.sort_by_key(|&(a, _)| a);
 
     let mut report = String::new();
     report.push_str("TN:simulator\n");
     report.push_str(&format!("SF:{source_file}\n"));
 
     for (idx, (name, _)) in functions.iter().enumerate() {
-        let sanitized = name.replace('\n', "_").replace(',', "_");
+        let sanitized = name.replace(['\n', ','], "_");
         report.push_str(&format!("FN:{},{}\n", idx + 1, sanitized));
     }
     for (name, count) in &functions {
-        let sanitized = name.replace('\n', "_").replace(',', "_");
+        let sanitized = name.replace(['\n', ','], "_");
         report.push_str(&format!("FNDA:{count},{sanitized}\n"));
     }
 
@@ -189,7 +187,7 @@ fn execute_operations(
 
                 // Check for signature verification mock
                 if let Some(mock_result) =
-                    check_signature_verification_mocks(&request, &invoke_op.host_function)
+                    check_signature_verification_mocks(request, &invoke_op.host_function)
                 {
                     logs.push(format!("Mock signature verification: {:?}", mock_result));
                     if !mock_result {
@@ -275,23 +273,15 @@ fn check_signature_verification_mocks(
     // Check if signature verification mocking is enabled
     let mock_result = request.mock_signature_verification?;
 
-    // Check if this is a signature verification host function
-    // Note: Current soroban-env-host version only has InvokeContract, CreateContract, and UploadContractWasm
-    // Signature verification functions may be handled at a different level or in newer versions
-    match host_function {
-        // For now, we'll mock signature verification based on function name patterns
-        _ => {
-            // Check if the function name contains signature verification related terms
-            let function_name = host_function.name();
-            if function_name.contains("Verify")
-                || function_name.contains("Signature")
-                || function_name.contains("Ed25519")
-            {
-                Some(mock_result)
-            } else {
-                None
-            }
-        }
+    // Check if the function name contains signature verification related terms
+    let function_name = host_function.name();
+    if function_name.contains("Verify")
+        || function_name.contains("Signature")
+        || function_name.contains("Ed25519")
+    {
+        Some(mock_result)
+    } else {
+        None
     }
 }
 
@@ -528,8 +518,6 @@ fn main() {
     }
     // --- END: Local WASM Loading Integration ---
 
-    let mut loaded_entries_count = 0;
-
     // Populate Host Storage
     // Populate Host Storage — resolve ledger entries (plain or zstd-compressed).
     let resolved_entries: Option<std::collections::HashMap<String, String>> =
@@ -571,7 +559,7 @@ fn main() {
     let mut coverage = CoverageTracker::default();
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         execute_operations(
-            &host,
+            host,
             operations,
             &request,
             request.memory_limit,
@@ -653,7 +641,6 @@ fn main() {
             let (events, diagnostic_events): (Vec<String>, Vec<DiagnosticEvent>) =
                 match sim_host.inner.get_events() {
                     Ok(evs) => {
-                        let evs = evs.clone();
                         let mut raw_events: Vec<String> = Vec::with_capacity(evs.0.len());
                         let diag_events: Vec<DiagnosticEvent> = (evs.0)
                             .iter()
@@ -847,7 +834,7 @@ fn main() {
                     .and_then(|m| m.map_wasm_offset_to_source(offset))
             });
 
-            let _final_logs = vec![
+            let _final_logs = [
                 format!("Host execution failed: {:?}", decoded_msg),
                 format!("Trace: {}", trace_display),
                 format!("Host Budget at failure: {:?}", budget),
@@ -865,7 +852,7 @@ fn main() {
             for event in &diagnostic_events {
                 let mut combined_text = event.data.clone();
                 for topic in &event.topics {
-                    combined_text.push_str(" ");
+                    combined_text.push(' ');
                     combined_text.push_str(topic);
                 }
 
@@ -1447,9 +1434,7 @@ mod tests {
             last_modified_ledger_seq: 99,
             data: LedgerEntryData::ContractData(ContractDataEntry {
                 ext: soroban_env_host::xdr::ExtensionPoint::V0,
-                contract: ScAddress::Contract(soroban_env_host::xdr::ContractId(
-                    contract_id.clone(),
-                )),
+                contract: ScAddress::Contract(soroban_env_host::xdr::ContractId(contract_id)),
                 key: ScVal::U32(5),
                 durability: ContractDataDurability::Persistent,
                 val: ScVal::U64(9),

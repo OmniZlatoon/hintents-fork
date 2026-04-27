@@ -96,11 +96,76 @@ func NewTxStreamer(c *Client) TxStreamer {
 		defer cancel()
 		if probeWebSocket(probeCtx, wsURL, c.token) {
 			logger.Logger.Info("WebSocket streaming enabled", "url", wsURL)
-			return &wsStreamer{client: c, wsURL: wsURL}
+			return &autoFallbackStreamer{
+				client:          c,
+				wsURL:           wsURL,
+				pollingFallback: &pollingStreamer{client: c},
+			}
 		}
 	}
 	logger.Logger.Info("WebSocket not supported, using JSON-RPC polling", "url", c.SorobanURL)
 	return &pollingStreamer{client: c}
+}
+
+// autoFallbackStreamer prefers WebSockets but switches to JSON-RPC polling if
+// the WebSocket stream cannot be established or ends before a terminal status.
+type autoFallbackStreamer struct {
+	client          *Client
+	wsURL           string
+	pollingFallback *pollingStreamer
+}
+
+// Stream implements TxStreamer.
+func (s *autoFallbackStreamer) Stream(ctx context.Context, hash string) (<-chan TxStatus, error) {
+	ws := &wsStreamer{client: s.client, wsURL: s.wsURL}
+	wsCh, err := ws.Stream(ctx, hash)
+	if err != nil {
+		logger.Logger.Warn("WebSocket stream setup failed, falling back to JSON-RPC polling", "hash", hash, "error", err)
+		return s.pollingFallback.Stream(ctx, hash)
+	}
+
+	out := make(chan TxStatus, 8)
+	go func() {
+		defer close(out)
+
+		for status := range wsCh {
+			if !forwardTxStatus(ctx, out, status) {
+				return
+			}
+			if status.IsFinal() {
+				return
+			}
+		}
+
+		if ctx.Err() != nil {
+			return
+		}
+
+		logger.Logger.Warn("WebSocket stream ended before a final transaction status, falling back to JSON-RPC polling", "hash", hash)
+
+		pollCh, err := s.pollingFallback.Stream(ctx, hash)
+		if err != nil {
+			logger.Logger.Error("Polling fallback failed to start", "hash", hash, "error", err)
+			return
+		}
+
+		for status := range pollCh {
+			if !forwardTxStatus(ctx, out, status) {
+				return
+			}
+		}
+	}()
+
+	return out, nil
+}
+
+func forwardTxStatus(ctx context.Context, out chan<- TxStatus, status TxStatus) bool {
+	select {
+	case out <- status:
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -176,15 +241,15 @@ func (s *wsStreamer) poll(ctx context.Context, conn *wsConn, hash string, id int
 		return true
 	}
 
-	conn.raw.SetWriteDeadline(time.Now().Add(5 * time.Second)) //nolint:errcheck
+	_ = conn.raw.SetWriteDeadline(time.Now().Add(5 * time.Second)) //nolint:errcheck
 	if err := wsWriteFrame(conn.raw, reqBytes); err != nil {
 		logger.Logger.Warn("ws streamer: write frame", "error", err)
 		return true
 	}
 
-	conn.raw.SetReadDeadline(time.Now().Add(15 * time.Second)) //nolint:errcheck
+	_ = conn.raw.SetReadDeadline(time.Now().Add(15 * time.Second)) //nolint:errcheck
 	data, err := wsReadMessage(conn.br)
-	conn.raw.SetDeadline(time.Time{}) //nolint:errcheck
+	_ = conn.raw.SetDeadline(time.Time{}) //nolint:errcheck
 	if err != nil {
 		logger.Logger.Warn("ws streamer: read message", "error", err)
 		return true
@@ -299,7 +364,7 @@ func (s *pollingStreamer) queryTxStatus(ctx context.Context, hash string) (TxSta
 	if err != nil {
 		return TxStatus{}, fmt.Errorf("poll: http: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	respBytes, err := io.ReadAll(httpResp.Body)
 	if err != nil {
@@ -361,9 +426,9 @@ type wsConn struct {
 
 func (c *wsConn) close() {
 	// Send a close frame before closing the underlying connection.
-	c.raw.SetWriteDeadline(time.Now().Add(1 * time.Second)) //nolint:errcheck
-	wsWriteFrame(c.raw, nil)                                //nolint:errcheck — best-effort
-	c.raw.Close()
+	_ = c.raw.SetWriteDeadline(time.Now().Add(1 * time.Second)) //nolint:errcheck
+	_ = wsWriteFrame(c.raw, nil)                                // best-effort
+	_ = c.raw.Close()
 }
 
 // ---------------------------------------------------------------------------
@@ -411,7 +476,7 @@ func wsDialUpgrade(ctx context.Context, wsURL, token string) (*wsConn, error) {
 	reqSB.WriteString("\r\n")
 
 	if _, err := io.WriteString(raw, reqSB.String()); err != nil {
-		raw.Close()
+		_ = raw.Close()
 		return nil, fmt.Errorf("ws: send upgrade request: %w", err)
 	}
 
@@ -420,11 +485,11 @@ func wsDialUpgrade(ctx context.Context, wsURL, token string) (*wsConn, error) {
 	// Read status line.
 	statusLine, err := br.ReadString('\n')
 	if err != nil {
-		raw.Close()
+		_ = raw.Close()
 		return nil, fmt.Errorf("ws: read status line: %w", err)
 	}
 	if !strings.Contains(statusLine, "101") {
-		raw.Close()
+		_ = raw.Close()
 		return nil, fmt.Errorf("ws: expected 101 Switching Protocols, got: %s", strings.TrimSpace(statusLine))
 	}
 
@@ -433,7 +498,7 @@ func wsDialUpgrade(ctx context.Context, wsURL, token string) (*wsConn, error) {
 	for {
 		line, err := br.ReadString('\n')
 		if err != nil {
-			raw.Close()
+			_ = raw.Close()
 			return nil, fmt.Errorf("ws: read upgrade headers: %w", err)
 		}
 		line = strings.TrimRight(line, "\r\n")
@@ -446,7 +511,7 @@ func wsDialUpgrade(ctx context.Context, wsURL, token string) (*wsConn, error) {
 	}
 
 	if want := wsAcceptKey(key); gotAccept != want {
-		raw.Close()
+		_ = raw.Close()
 		return nil, fmt.Errorf("ws: accept key mismatch: got %q, want %q", gotAccept, want)
 	}
 
@@ -635,7 +700,7 @@ func wsGenKey() string {
 // client key per RFC 6455 §4.2.2 step 5.4.
 func wsAcceptKey(clientKey string) string {
 	h := sha1.New()
-	io.WriteString(h, clientKey+wsGUID) //nolint:errcheck — sha1.Write never fails
+	_, _ = io.WriteString(h, clientKey+wsGUID) // sha1.Write never fails
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
 }
 

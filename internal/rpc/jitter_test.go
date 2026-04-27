@@ -27,16 +27,16 @@ func TestFullJitterDistribution(t *testing.T) {
 
 	// Calculate statistics
 	var sum time.Duration
-	min := backoffs[0]
-	max := backoffs[0]
+	minVal := backoffs[0]
+	maxVal := backoffs[0]
 
 	for _, b := range backoffs {
 		sum += b
-		if b < min {
-			min = b
+		if b < minVal {
+			minVal = b
 		}
-		if b > max {
-			max = b
+		if b > maxVal {
+			maxVal = b
 		}
 	}
 
@@ -49,8 +49,8 @@ func TestFullJitterDistribution(t *testing.T) {
 	// zero (rand.Float64() returns [0.0, 1.0)).  We verify spread via the mean and
 	// unique-value checks below instead of asserting min > 0.
 
-	if max > expectedMax {
-		t.Errorf("Maximum backoff %v exceeds expected max %v", max, expectedMax)
+	if maxVal > expectedMax {
+		t.Errorf("Maximum backoff %v exceeds expected max %v", maxVal, expectedMax)
 	}
 
 	// Mean should be roughly half of the maximum range

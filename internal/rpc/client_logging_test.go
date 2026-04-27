@@ -26,7 +26,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	hProtocol "github.com/stellar/go/protocols/horizon"
+	hProtocol "github.com/stellar/go-stellar-sdk/protocols/horizon"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -166,7 +166,7 @@ func TestLoggingPolicy_HorizonGetTransaction_FailureIsError(t *testing.T) {
 func TestLoggingPolicy_SorobanGetHealth_SuccessIsDebug(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"jsonrpc":"2.0","id":1,"result":{"status":"healthy","latestLedger":100,"oldestLedger":1,"ledgerRetentionWindow":50}}`)
+		_, _ = fmt.Fprint(w, `{"jsonrpc":"2.0","id":1,"result":{"status":"healthy","latestLedger":100,"oldestLedger":1,"ledgerRetentionWindow":50}}`)
 	}))
 	defer srv.Close()
 
@@ -190,7 +190,7 @@ func TestLoggingPolicy_SorobanGetHealth_SuccessIsDebug(t *testing.T) {
 func TestLoggingPolicy_SorobanGetHealth_RPCErrorIsError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"jsonrpc":"2.0","id":1,"error":{"code":-32000,"message":"node unhealthy"}}`)
+		_, _ = fmt.Fprint(w, `{"jsonrpc":"2.0","id":1,"error":{"code":-32000,"message":"node unhealthy"}}`)
 	}))
 	defer srv.Close()
 
@@ -222,7 +222,7 @@ func TestLoggingPolicy_SorobanGetHealth_TransportErrorIsError(t *testing.T) {
 			return
 		}
 		conn, _, _ := hj.Hijack()
-		conn.Close()
+		_ = conn.Close()
 	}))
 	defer srv.Close()
 
@@ -243,7 +243,7 @@ func TestLoggingPolicy_SorobanGetHealth_TransportErrorIsError(t *testing.T) {
 func TestLoggingPolicy_SorobanSimulate_SuccessIsDebug(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"jsonrpc":"2.0","id":1,"result":{"minResourceFee":"100","transactionData":""}}`)
+		_, _ = fmt.Fprint(w, `{"jsonrpc":"2.0","id":1,"result":{"minResourceFee":"100","transactionData":""}}`)
 	}))
 	defer srv.Close()
 
@@ -267,7 +267,7 @@ func TestLoggingPolicy_SorobanSimulate_SuccessIsDebug(t *testing.T) {
 func TestLoggingPolicy_SorobanSimulate_RPCErrorIsError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"jsonrpc":"2.0","id":1,"error":{"code":-32603,"message":"simulation failed"}}`)
+		_, _ = fmt.Fprint(w, `{"jsonrpc":"2.0","id":1,"error":{"code":-32603,"message":"simulation failed"}}`)
 	}))
 	defer srv.Close()
 
@@ -294,7 +294,7 @@ func TestLoggingPolicy_SorobanSimulate_TransportErrorIsError(t *testing.T) {
 			return
 		}
 		conn, _, _ := hj.Hijack()
-		conn.Close()
+		_ = conn.Close()
 	}))
 	defer srv.Close()
 
@@ -321,7 +321,7 @@ func TestLoggingPolicy_SorobanSimulate_TransportErrorIsError(t *testing.T) {
 func TestLoggingPolicy_SorobanGetLedgerEntries_RPCErrorIsError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"jsonrpc":"2.0","id":1,"error":{"code":-32002,"message":"entry not found"}}`)
+		_, _ = fmt.Fprint(w, `{"jsonrpc":"2.0","id":1,"error":{"code":-32002,"message":"entry not found"}}`)
 	}))
 	defer srv.Close()
 
@@ -348,7 +348,7 @@ func TestLoggingPolicy_SorobanGetLedgerEntries_TransportErrorIsError(t *testing.
 			return
 		}
 		conn, _, _ := hj.Hijack()
-		conn.Close()
+		_ = conn.Close()
 	}))
 	defer srv.Close()
 
@@ -373,7 +373,7 @@ func TestLoggingPolicy_NoAttemptLevelINFOOnSuccess(t *testing.T) {
 	// --- Soroban GetHealth ---
 	healthSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"jsonrpc":"2.0","id":1,"result":{"status":"healthy","latestLedger":100,"oldestLedger":1,"ledgerRetentionWindow":50}}`)
+		_, _ = fmt.Fprint(w, `{"jsonrpc":"2.0","id":1,"result":{"status":"healthy","latestLedger":100,"oldestLedger":1,"ledgerRetentionWindow":50}}`)
 	}))
 	defer healthSrv.Close()
 

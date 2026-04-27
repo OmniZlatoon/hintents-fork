@@ -37,7 +37,7 @@ import (
 	"github.com/dotandev/hintents/internal/watch"
 
 	"github.com/spf13/cobra"
-	"github.com/stellar/go/xdr"
+	"github.com/stellar/go-stellar-sdk/xdr"
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -53,7 +53,6 @@ var (
 	compareNetworkFlag  string
 	verbose             bool
 	wasmPath            string
-	wasmOptimizeFlag    bool
 	args                []string
 	themeFlag           string
 	noCacheFlag         bool
@@ -73,8 +72,6 @@ var (
 	mockTimeFlag        int64
 	mockBaseFeeFlag     uint32
 	mockGasPriceFlag    uint64
-	asyncFlag           bool
-	asyncTimeoutFlag    int
 	exportSVGFlag       string
 	loadSnapshotsFlag   string
 	saveSnapshotsFlag   string
@@ -360,6 +357,12 @@ Local WASM Replay Mode:
 					opts = append(opts, rpc.WithHorizonURL(cfg.RpcUrl))
 					horizonURL = cfg.RpcUrl
 				}
+				if cfg.FailureThreshold > 0 {
+					opts = append(opts, rpc.WithCircuitBreakerThreshold(cfg.FailureThreshold))
+				}
+				if cfg.RetryTimeout > 0 {
+					opts = append(opts, rpc.WithCircuitBreakerTimeout(cfg.RetryTimeout))
+				}
 			}
 		}
 
@@ -389,33 +392,36 @@ Local WASM Replay Mode:
 		// Fetch transaction details
 		if watchFlag {
 			spinner := watch.NewSpinner()
-			poller := watch.NewPoller(watch.PollerConfig{
-				InitialInterval: 1 * time.Second,
-				MaxInterval:     10 * time.Second,
-				TimeoutDuration: time.Duration(watchTimeoutFlag) * time.Second,
-			})
-
 			spinner.Start("Waiting for transaction to appear on-chain...")
+			watchCtx, cancelWatch := context.WithTimeout(ctx, time.Duration(watchTimeoutFlag)*time.Second)
+			defer cancelWatch()
 
-			result, err := poller.Poll(ctx, func(pollCtx context.Context) (interface{}, error) {
-				_, pollErr := client.GetTransaction(pollCtx, txHash)
-				if pollErr != nil {
-					return nil, pollErr
-				}
-				return true, nil
-			}, nil)
-
+			statusCh, err := client.WatchTransaction(watchCtx, txHash)
 			if err != nil {
-				spinner.StopWithError("Failed to poll for transaction")
+				spinner.StopWithError("Failed to start transaction watch")
 				return errors.WrapSimulationLogicError(fmt.Sprintf("watch mode error: %v", err))
 			}
 
-			if !result.Found {
+			var finalStatus *rpc.TxStatus
+			for status := range statusCh {
+				if status.IsFinal() {
+					statusCopy := status
+					finalStatus = &statusCopy
+					break
+				}
+			}
+
+			if err := watchCtx.Err(); err != nil {
 				spinner.StopWithError("Transaction not found within timeout")
 				return errors.WrapTransactionNotFound(fmt.Errorf("not found after %d seconds", watchTimeoutFlag))
 			}
 
-			spinner.StopWithMessage("Transaction found! Starting debug...")
+			if finalStatus == nil {
+				spinner.StopWithError("Transaction watch ended unexpectedly")
+				return errors.WrapSimulationLogicError("watch mode ended before a final transaction status was received")
+			}
+
+			spinner.StopWithMessage(fmt.Sprintf("Transaction reached %s. Starting debug...", strings.ToLower(finalStatus.Status)))
 		}
 
 		fmt.Printf("Fetching transaction: %s\n", txHash)
@@ -763,7 +769,7 @@ Local WASM Replay Mode:
 			fmt.Printf("Warning: failed to serialize simulation results: %v\n", err)
 		}
 
-		sessionData := &session.SessionData{
+		sessionData := &session.Data{
 			ID:              session.GenerateID(txHash),
 			CreatedAt:       time.Now(),
 			LastAccessAt:    time.Now(),
@@ -897,8 +903,8 @@ func runLocalWasmReplay() error {
 
 func newLocalWasmSimulationRequest(forceNoCache bool) *simulator.SimulationRequest {
 	req := &simulator.SimulationRequest{
-		EnvelopeXdr:     "", // Empty for local replay
-		ResultMetaXdr:   "", // Empty for local replay
+		EnvelopeXdr:     "",  // Empty for local replay
+		ResultMetaXdr:   "",  // Empty for local replay
 		LedgerEntries:   nil, // Mock state will be generated
 		WasmPath:        &wasmPath,
 		NoCache:         noCacheFlag || forceNoCache,
@@ -1635,4 +1641,3 @@ func displaySourceLocation(loc *simulator.SourceLocation) {
 	}
 	fmt.Println()
 }
-

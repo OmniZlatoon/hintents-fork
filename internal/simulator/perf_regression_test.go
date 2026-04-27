@@ -44,10 +44,16 @@ type BenchmarkResult struct {
 func loadBaseline(t *testing.T) *PerfBaseline {
 	t.Helper()
 
-	baselinePath := filepath.Join("perf_baseline.json")
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("failed to get current file path")
+	}
+	dir := filepath.Dir(filename)
+	baselinePath := filepath.Join(dir, "perf_baseline.json")
+
 	data, err := os.ReadFile(baselinePath)
 	if err != nil {
-		t.Fatalf("failed to load baseline: %v", err)
+		t.Fatalf("failed to load baseline from %s: %v", baselinePath, err)
 	}
 
 	var baseline PerfBaseline

@@ -24,12 +24,12 @@ func GenerateCallGraphSVG(root *decoder.CallNode) string {
 
 	// Track total dimensions and compute positions
 	positions := make(map[*decoder.CallNode][2]int) // node -> [x, y]
-	
+
 	// First pass: calculate tree width and positions
 	var calculatePositions func(node *decoder.CallNode, x, y int) int
 	calculatePositions = func(node *decoder.CallNode, x, y int) int {
 		positions[node] = [2]int{x, y}
-		
+
 		if len(node.SubCalls) == 0 {
 			return nodeWidth
 		}
@@ -54,7 +54,7 @@ func GenerateCallGraphSVG(root *decoder.CallNode) string {
 	if totalWidth < nodeWidth {
 		totalWidth = nodeWidth
 	}
-	
+
 	// Find max depth for height
 	maxDepth := 0
 	var findDepth func(node *decoder.CallNode, depth int)
@@ -71,8 +71,8 @@ func GenerateCallGraphSVG(root *decoder.CallNode) string {
 
 	// Build SVG
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf(`<svg viewBox="-20 -20 %d %d" xmlns="http://www.w3.org/2000/svg" font-family="Inter, system-ui, sans-serif">`, totalWidth+40, totalHeight+40))
-	
+	fmt.Fprintf(&sb, `<svg viewBox="-20 -20 %d %d" xmlns="http://www.w3.org/2000/svg" font-family="Inter, system-ui, sans-serif">`, totalWidth+40, totalHeight+40)
+
 	// CSS for styling and dark mode
 	sb.WriteString(`
 <style>
@@ -114,31 +114,31 @@ func GenerateCallGraphSVG(root *decoder.CallNode) string {
 			y1 := pos[1] + nodeHeight
 			x2 := childPos[0] + nodeWidth/2
 			y2 := childPos[1]
-			
+
 			// Cubic bezier for smooth curves
 			midY := y1 + (y2-y1)/2
-			sb.WriteString(fmt.Sprintf(`<path d="M %d %d C %d %d, %d %d, %d %d" stroke="var(--link)" fill="none" stroke-width="1.5" />`,
-				x1, y1, x1, midY, x2, midY, x2, y2))
+			fmt.Fprintf(&sb, `<path d="M %d %d C %d %d, %d %d, %d %d" stroke="var(--link)" fill="none" stroke-width="1.5" />`,
+				x1, y1, x1, midY, x2, midY, x2, y2)
 		}
 	}
 
 	// Third pass: Draw nodes
 	for node, pos := range positions {
 		x, y := pos[0], pos[1]
-		
+
 		contractShort := node.ContractID
 		if len(contractShort) > 12 {
 			contractShort = contractShort[:6] + "..." + contractShort[len(contractShort)-4:]
 		}
 
-		sb.WriteString(fmt.Sprintf(`
+		fmt.Fprintf(&sb, `
 	<g transform="translate(%d, %d)">
 		<rect width="%d" height="%d" rx="8" fill="var(--node-bg)" stroke="var(--node-border)" />
 		<text x="12" y="24" class="node-title">%s</text>
 		<text x="12" y="40" class="node-sub">%s</text>
 		<text x="12" y="60" class="node-metric" fill="var(--cpu)">CPU: %d</text>
 		<text x="100" y="60" class="node-metric" fill="var(--mem)">Mem: %s</text>
-	</g>`, x, y, nodeWidth, nodeHeight, node.Function, contractShort, node.CPUInstructions, formatBytes(node.MemoryBytes)))
+	</g>`, x, y, nodeWidth, nodeHeight, node.Function, contractShort, node.CPUInstructions, formatBytes(node.MemoryBytes))
 	}
 
 	sb.WriteString("</svg>")

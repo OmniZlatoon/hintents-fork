@@ -11,13 +11,13 @@ import (
 
 	"github.com/dotandev/hintents/internal/errors"
 	"github.com/dotandev/hintents/internal/logger"
-	"github.com/stellar/go/xdr"
+	"github.com/stellar/go-stellar-sdk/xdr"
 )
 
 // validateLedgerKeyXDR decodes a base64-encoded XDR LedgerKey, validates its structure,
 // and emits a debug log with the key's SHA-256 hash and type. It is the canonical
 // integrity check shared by VerifyLedgerEntryHash and VerifyLedgerEntries.
-func validateLedgerKeyXDR(keyB64 string) error {
+func validateLedgerKeyXDR(keyB64 string) error { //nolint:unused
 	keyBytes, err := base64.StdEncoding.DecodeString(keyB64)
 	if err != nil {
 		return errors.WrapValidationError(fmt.Sprintf("failed to decode ledger key: %v", err))

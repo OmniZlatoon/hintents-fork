@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stellar/go/xdr"
+	"github.com/stellar/go-stellar-sdk/xdr"
 )
 
 // TestDetector_FlawedContract simulates a known flawed contract with multiple vulnerabilities
@@ -108,9 +108,10 @@ func TestDetector_FlawedContract(t *testing.T) {
 	heuristicCount := 0
 
 	for _, finding := range findings {
-		if finding.Type == FindingVerifiedRisk {
+		switch finding.Type {
+		case FindingVerifiedRisk:
 			verifiedCount++
-		} else if finding.Type == FindingHeuristicWarn {
+		case FindingHeuristicWarn:
 			heuristicCount++
 		}
 	}

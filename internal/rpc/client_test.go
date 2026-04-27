@@ -16,12 +16,12 @@ import (
 	"time"
 
 	"github.com/dotandev/hintents/internal/errors"
-	"github.com/stellar/go/clients/horizonclient"
-	hProtocol "github.com/stellar/go/protocols/horizon"
-	effects "github.com/stellar/go/protocols/horizon/effects"
-	operations "github.com/stellar/go/protocols/horizon/operations"
-	"github.com/stellar/go/support/render/problem"
-	"github.com/stellar/go/txnbuild"
+	"github.com/stellar/go-stellar-sdk/clients/horizonclient"
+	hProtocol "github.com/stellar/go-stellar-sdk/protocols/horizon"
+	effects "github.com/stellar/go-stellar-sdk/protocols/horizon/effects"
+	operations "github.com/stellar/go-stellar-sdk/protocols/horizon/operations"
+	"github.com/stellar/go-stellar-sdk/support/render/problem"
+	"github.com/stellar/go-stellar-sdk/txnbuild"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,22 +33,22 @@ type mockHorizonClient struct {
 func (m *mockHorizonClient) TransactionDetail(hash string) (hProtocol.Transaction, error) {
 	return m.TransactionDetailFunc(hash)
 }
-func (m *mockHorizonClient) AccountData(request horizonclient.AccountRequest) (hProtocol.AccountData, error) {
+func (m *mockHorizonClient) AccountData(_ horizonclient.AccountRequest) (hProtocol.AccountData, error) {
 	return hProtocol.AccountData{}, nil
 }
-func (m *mockHorizonClient) AccountDetail(request horizonclient.AccountRequest) (hProtocol.Account, error) {
+func (m *mockHorizonClient) AccountDetail(_ horizonclient.AccountRequest) (hProtocol.Account, error) {
 	return hProtocol.Account{}, nil
 }
-func (m *mockHorizonClient) Accounts(request horizonclient.AccountsRequest) (hProtocol.AccountsPage, error) {
+func (m *mockHorizonClient) Accounts(_ horizonclient.AccountsRequest) (hProtocol.AccountsPage, error) {
 	return hProtocol.AccountsPage{}, nil
 }
-func (m *mockHorizonClient) Effects(request horizonclient.EffectRequest) (effects.EffectsPage, error) {
+func (m *mockHorizonClient) Effects(_ horizonclient.EffectRequest) (effects.EffectsPage, error) {
 	return effects.EffectsPage{}, nil
 }
-func (m *mockHorizonClient) Assets(request horizonclient.AssetRequest) (hProtocol.AssetsPage, error) {
+func (m *mockHorizonClient) Assets(_ horizonclient.AssetRequest) (hProtocol.AssetsPage, error) {
 	return hProtocol.AssetsPage{}, nil
 }
-func (m *mockHorizonClient) Ledgers(request horizonclient.LedgerRequest) (hProtocol.LedgersPage, error) {
+func (m *mockHorizonClient) Ledgers(_ horizonclient.LedgerRequest) (hProtocol.LedgersPage, error) {
 	return hProtocol.LedgersPage{}, nil
 }
 func (m *mockHorizonClient) LedgerDetail(sequence uint32) (hProtocol.Ledger, error) {
@@ -58,20 +58,20 @@ func (m *mockHorizonClient) LedgerDetail(sequence uint32) (hProtocol.Ledger, err
 	return hProtocol.Ledger{}, nil
 }
 func (m *mockHorizonClient) FeeStats() (hProtocol.FeeStats, error) { return hProtocol.FeeStats{}, nil }
-func (m *mockHorizonClient) Offers(request horizonclient.OfferRequest) (hProtocol.OffersPage, error) {
+func (m *mockHorizonClient) Offers(_ horizonclient.OfferRequest) (hProtocol.OffersPage, error) {
 	return hProtocol.OffersPage{}, nil
 }
 func (m *mockHorizonClient) OfferDetails(offerID string) (hProtocol.Offer, error) {
 	return hProtocol.Offer{}, nil
 }
-func (m *mockHorizonClient) Operations(request horizonclient.OperationRequest) (operations.OperationsPage, error) {
+func (m *mockHorizonClient) Operations(_ horizonclient.OperationRequest) (operations.OperationsPage, error) {
 	return operations.OperationsPage{}, nil
 }
 func (m *mockHorizonClient) OperationDetail(id string) (operations.Operation, error) {
 	var op operations.Operation
 	return op, nil
 }
-func (m *mockHorizonClient) StreamPayments(ctx context.Context, request horizonclient.OperationRequest, handler horizonclient.OperationHandler) error {
+func (m *mockHorizonClient) StreamPayments(ctx context.Context, _ horizonclient.OperationRequest, handler horizonclient.OperationHandler) error {
 	return nil
 }
 func (m *mockHorizonClient) SubmitTransactionXDR(transactionXdr string) (hProtocol.Transaction, error) {
@@ -104,22 +104,22 @@ func (m *mockHorizonClient) AsyncSubmitFeeBumpTransaction(transaction *txnbuild.
 func (m *mockHorizonClient) AsyncSubmitTransaction(transaction *txnbuild.Transaction) (hProtocol.AsyncTransactionSubmissionResponse, error) {
 	return hProtocol.AsyncTransactionSubmissionResponse{}, nil
 }
-func (m *mockHorizonClient) Transactions(request horizonclient.TransactionRequest) (hProtocol.TransactionsPage, error) {
+func (m *mockHorizonClient) Transactions(_ horizonclient.TransactionRequest) (hProtocol.TransactionsPage, error) {
 	return hProtocol.TransactionsPage{}, nil
 }
-func (m *mockHorizonClient) OrderBook(request horizonclient.OrderBookRequest) (hProtocol.OrderBookSummary, error) {
+func (m *mockHorizonClient) OrderBook(_ horizonclient.OrderBookRequest) (hProtocol.OrderBookSummary, error) {
 	return hProtocol.OrderBookSummary{}, nil
 }
-func (m *mockHorizonClient) Paths(request horizonclient.PathsRequest) (hProtocol.PathsPage, error) {
+func (m *mockHorizonClient) Paths(_ horizonclient.PathsRequest) (hProtocol.PathsPage, error) {
 	return hProtocol.PathsPage{}, nil
 }
-func (m *mockHorizonClient) Payments(request horizonclient.OperationRequest) (operations.OperationsPage, error) {
+func (m *mockHorizonClient) Payments(_ horizonclient.OperationRequest) (operations.OperationsPage, error) {
 	return operations.OperationsPage{}, nil
 }
-func (m *mockHorizonClient) TradeAggregations(request horizonclient.TradeAggregationRequest) (hProtocol.TradeAggregationsPage, error) {
+func (m *mockHorizonClient) TradeAggregations(_ horizonclient.TradeAggregationRequest) (hProtocol.TradeAggregationsPage, error) {
 	return hProtocol.TradeAggregationsPage{}, nil
 }
-func (m *mockHorizonClient) Trades(request horizonclient.TradeRequest) (hProtocol.TradesPage, error) {
+func (m *mockHorizonClient) Trades(_ horizonclient.TradeRequest) (hProtocol.TradesPage, error) {
 	return hProtocol.TradesPage{}, nil
 }
 func (m *mockHorizonClient) Fund(addr string) (hProtocol.Transaction, error) {
@@ -329,7 +329,7 @@ func TestGetLedgerEntries_WithVerification(t *testing.T) {
 func TestGetLedgerEntries_ResponseTooLarge(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
-		w.Write([]byte("response too large"))
+		_, _ = w.Write([]byte("response too large"))
 	}))
 	defer server.Close()
 
@@ -349,7 +349,7 @@ func TestGetLedgerEntries_ResponseTooLarge(t *testing.T) {
 func TestSimulateTransaction_ResponseTooLarge(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
-		w.Write([]byte("response too large"))
+		_, _ = w.Write([]byte("response too large"))
 	}))
 	defer server.Close()
 
@@ -459,7 +459,7 @@ func TestWithRequestTimeout_RespectsContextDeadline(t *testing.T) {
 }
 func TestWithHTTPClient_Injection(t *testing.T) {
 	mockClient := &mockHTTPClient{
-		DoFunc: func(req *http.Request) (*http.Response, error) {
+		DoFunc: func(_ *http.Request) (*http.Response, error) {
 			return &http.Response{
 				StatusCode: http.StatusOK,
 				Body:       io.NopCloser(strings.NewReader(`{"jsonrpc":"2.0","id":1,"result":{"status":"healthy"}}`)),
@@ -490,14 +490,14 @@ func (m *mockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 	return m.DoFunc(req)
 }
 
-func (m *mockHTTPClient) Get(url string) (*http.Response, error) {
+func (m *mockHTTPClient) Get(_ string) (*http.Response, error) {
 	return nil, fmt.Errorf("Get not implemented in mockHTTPClient")
 }
 
-func (m *mockHTTPClient) Post(url, contentType string, body io.Reader) (*http.Response, error) {
+func (m *mockHTTPClient) Post(_, _ string, _ io.Reader) (*http.Response, error) {
 	return nil, fmt.Errorf("Post not implemented in mockHTTPClient")
 }
 
-func (m *mockHTTPClient) PostForm(url string, data url.Values) (*http.Response, error) {
+func (m *mockHTTPClient) PostForm(_ string, _ url.Values) (*http.Response, error) {
 	return nil, fmt.Errorf("PostForm not implemented in mockHTTPClient")
 }

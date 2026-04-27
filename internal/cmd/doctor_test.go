@@ -139,7 +139,7 @@ func TestGoVersionMismatch(t *testing.T) {
 		if err != nil {
 			os.Remove("go.mod")
 		} else {
-			os.WriteFile("go.mod", orig, 0644)
+			_ = os.WriteFile("go.mod", orig, 0644)
 		}
 	}()
 	_ = os.WriteFile("go.mod", []byte("module foo\n\ngo 9.99\n"), 0644)
@@ -158,14 +158,14 @@ func TestCheckConfigTOML(t *testing.T) {
 	}
 
 	// valid config
-	os.WriteFile(".erst.toml", []byte("rpc_url = \"https://example.com\"\n"), 0644)
+	_ = os.WriteFile(".erst.toml", []byte("rpc_url = \"https://example.com\"\n"), 0644)
 	dep = checkConfigTOML(false)
 	if !dep.Installed {
 		t.Error("expected valid toml to succeed")
 	}
 
 	// invalid syntax
-	os.WriteFile(".erst.toml", []byte("rpc_url = \n"), 0644)
+	_ = os.WriteFile(".erst.toml", []byte("rpc_url = \n"), 0644)
 	dep = checkConfigTOML(true)
 	if dep.Installed {
 		t.Error("expected invalid toml to fail")
@@ -416,20 +416,51 @@ func TestCheckDeepLink_VerbosePath(t *testing.T) {
 	}
 }
 
-// TestBuildDeepLinkFixHint_Empty verifies the fallback message when no steps
+// TestBuildDeepLinkFixHint_NilSteps verifies the fallback message when nil steps
 // are provided.
-func TestBuildDeepLinkFixHint_Empty(t *testing.T) {
+func TestBuildDeepLinkFixHint_NilSteps(t *testing.T) {
 	hint := buildDeepLinkFixHint(nil)
 	if hint == "" {
 		t.Error("buildDeepLinkFixHint(nil) must return a non-empty fallback hint")
 	}
 }
 
-// TestBuildDeepLinkFixHint_UsesFirstStep verifies that the first step is used.
-func TestBuildDeepLinkFixHint_UsesFirstStep(t *testing.T) {
-	steps := []string{"step one", "step two"}
+// TestBuildDeepLinkFixHint_OneStep verifies that the only step is returned.
+func TestBuildDeepLinkFixHint_OneStep(t *testing.T) {
+	steps := []string{"step one"}
 	hint := buildDeepLinkFixHint(steps)
 	if hint != "step one" {
 		t.Errorf("buildDeepLinkFixHint() = %q, want %q", hint, "step one")
+	}
+}
+
+// TestBuildDeepLinkFixHint_FiveSteps verifies that the first step is returned.
+func TestBuildDeepLinkFixHint_FiveSteps(t *testing.T) {
+	steps := []string{"step one", "step two", "step three", "step four", "step five"}
+	hint := buildDeepLinkFixHint(steps)
+	if hint != "step one" {
+		t.Errorf("buildDeepLinkFixHint() = %q, want %q", hint, "step one")
+	}
+}
+
+// TestBuildDeepLinkFixHint_AlwaysReturnsMeaningfulString verifies that all
+// cases (nil, 1 step, 5 steps) always return a meaningful (non-empty) string.
+func TestBuildDeepLinkFixHint_AlwaysReturnsMeaningfulString(t *testing.T) {
+	cases := []struct {
+		name  string
+		steps []string
+	}{
+		{"nil steps", nil},
+		{"one step", []string{"do this first"}},
+		{"five steps", []string{"step 1", "step 2", "step 3", "step 4", "step 5"}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			hint := buildDeepLinkFixHint(tc.steps)
+			if hint == "" {
+				t.Errorf("buildDeepLinkFixHint(%v) returned empty string, want non-empty", tc.steps)
+			}
+		})
 	}
 }

@@ -23,11 +23,11 @@ type InMemorySigner struct {
 func NewInMemorySigner(privateKeyHex string) (*InMemorySigner, error) {
 	raw, err := hex.DecodeString(privateKeyHex)
 	if err != nil {
-		return nil, &SignerError{Op: "inmemory", Msg: "invalid private key hex", Err: err}
+		return nil, &Error{Op: "inmemory", Msg: "invalid private key hex", Err: err}
 	}
 
 	if len(raw) != ed25519.PrivateKeySize && len(raw) != ed25519.SeedSize {
-		return nil, &SignerError{
+		return nil, &Error{
 			Op:  "inmemory",
 			Msg: fmt.Sprintf("invalid private key length: %d", len(raw)),
 		}
@@ -58,7 +58,7 @@ func (s *InMemorySigner) Sign(data []byte) ([]byte, error) {
 func (s *InMemorySigner) PublicKey() ([]byte, error) {
 	pub, ok := s.privateKey.Public().(ed25519.PublicKey)
 	if !ok {
-		return nil, &SignerError{Op: "inmemory", Msg: "failed to derive public key"}
+		return nil, &Error{Op: "inmemory", Msg: "failed to derive public key"}
 	}
 	return []byte(pub), nil
 }

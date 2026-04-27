@@ -5,11 +5,13 @@
 # Validate CI/CD configuration
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-cd "${REPO_ROOT}"
+# Ensure we are in the project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." &>/dev/null && pwd)"
+cd "${REPO_ROOT}" || { echo "Failed to change directory to project root: ${REPO_ROOT}"; exit 1; }
 
 echo "Validating CI/CD configuration..."
+echo "Project root: ${REPO_ROOT}"
 
 # Check if required files exist
 if [ ! -f ".github/workflows/ci.yml" ]; then

@@ -26,10 +26,10 @@ func (r *DetailedReporter) GenerateReport() string {
 	}
 
 	sb.WriteString("=== MULTI-SIGNATURE AUTHORIZATION DEBUG REPORT ===\n\n")
-	sb.WriteString(fmt.Sprintf("Authorization: %s\n", status))
-	sb.WriteString(fmt.Sprintf("Account: %s\n", r.trace.AccountID))
-	sb.WriteString(fmt.Sprintf("Total Signers: %d\n", r.trace.SignerCount))
-	sb.WriteString(fmt.Sprintf("Valid Signatures: %d\n\n", r.trace.ValidSignatures))
+	fmt.Fprintf(&sb, "Authorization: %s\n", status)
+	fmt.Fprintf(&sb, "Account: %s\n", r.trace.AccountID)
+	fmt.Fprintf(&sb, "Total Signers: %d\n", r.trace.SignerCount)
+	fmt.Fprintf(&sb, "Valid Signatures: %d\n\n", r.trace.ValidSignatures)
 
 	if len(r.trace.Failures) > 0 {
 		r.writeFailures(&sb)
@@ -49,17 +49,17 @@ func (r *DetailedReporter) GenerateReport() string {
 func (r *DetailedReporter) writeFailures(sb *strings.Builder) {
 	sb.WriteString("--- FAILURE DETAILS ---\n")
 	for i, failure := range r.trace.Failures {
-		sb.WriteString(fmt.Sprintf("\nFailure #%d:\n", i+1))
-		sb.WriteString(fmt.Sprintf("  Reason: %s\n", failure.FailureReason))
-		sb.WriteString(fmt.Sprintf("  Required Weight: %d\n", failure.RequiredWeight))
-		sb.WriteString(fmt.Sprintf("  Collected Weight: %d\n", failure.CollectedWeight))
-		sb.WriteString(fmt.Sprintf("  Missing Weight: %d\n", failure.MissingWeight))
+		fmt.Fprintf(sb, "\nFailure #%d:\n", i+1)
+		fmt.Fprintf(sb, "  Reason: %s\n", failure.FailureReason)
+		fmt.Fprintf(sb, "  Required Weight: %d\n", failure.RequiredWeight)
+		fmt.Fprintf(sb, "  Collected Weight: %d\n", failure.CollectedWeight)
+		fmt.Fprintf(sb, "  Missing Weight: %d\n", failure.MissingWeight)
 
 		if len(failure.FailedSigners) > 0 {
 			sb.WriteString("  Failed Signers:\n")
 			for _, signer := range failure.FailedSigners {
-				sb.WriteString(fmt.Sprintf("    - %s (weight: %d, type: %s)\n",
-					signer.SignerKey, signer.Weight, signer.SignerType))
+				fmt.Fprintf(sb, "    - %s (weight: %d, type: %s)\n",
+					signer.SignerKey, signer.Weight, signer.SignerType)
 			}
 		}
 	}
@@ -68,19 +68,19 @@ func (r *DetailedReporter) writeFailures(sb *strings.Builder) {
 func (r *DetailedReporter) writeEvents(sb *strings.Builder) {
 	sb.WriteString("\n--- AUTHORIZATION TRACE ---\n")
 	for i, event := range r.trace.AuthEvents {
-		sb.WriteString(fmt.Sprintf("\n[%d] %s\n", i+1, event.EventType))
+		fmt.Fprintf(sb, "\n[%d] %s\n", i+1, event.EventType)
 		if event.SignerKey != "" {
-			sb.WriteString(fmt.Sprintf("    Signer: %s\n", event.SignerKey))
+			fmt.Fprintf(sb, "    Signer: %s\n", event.SignerKey)
 		}
-		sb.WriteString(fmt.Sprintf("    Status: %s\n", event.Status))
+		fmt.Fprintf(sb, "    Status: %s\n", event.Status)
 		if event.Weight > 0 {
-			sb.WriteString(fmt.Sprintf("    Weight: %d\n", event.Weight))
+			fmt.Fprintf(sb, "    Weight: %d\n", event.Weight)
 		}
 		if event.Details != "" {
-			sb.WriteString(fmt.Sprintf("    Details: %s\n", event.Details))
+			fmt.Fprintf(sb, "    Details: %s\n", event.Details)
 		}
 		if event.ErrorReason != "" {
-			sb.WriteString(fmt.Sprintf("    Error: %s\n", event.ErrorReason))
+			fmt.Fprintf(sb, "    Error: %s\n", event.ErrorReason)
 		}
 	}
 }
@@ -88,11 +88,11 @@ func (r *DetailedReporter) writeEvents(sb *strings.Builder) {
 func (r *DetailedReporter) writeContracts(sb *strings.Builder) {
 	sb.WriteString("\n--- CUSTOM CONTRACT AUTHORIZATIONS ---\n")
 	for _, contract := range r.trace.CustomContracts {
-		sb.WriteString(fmt.Sprintf("\nContract: %s\n", contract.ContractID))
-		sb.WriteString(fmt.Sprintf("  Method: %s\n", contract.Method))
-		sb.WriteString(fmt.Sprintf("  Result: %s\n", contract.Result))
+		fmt.Fprintf(sb, "\nContract: %s\n", contract.ContractID)
+		fmt.Fprintf(sb, "  Method: %s\n", contract.Method)
+		fmt.Fprintf(sb, "  Result: %s\n", contract.Result)
 		if contract.ErrorMsg != "" {
-			sb.WriteString(fmt.Sprintf("  Error: %s\n", contract.ErrorMsg))
+			fmt.Fprintf(sb, "  Error: %s\n", contract.ErrorMsg)
 		}
 	}
 }

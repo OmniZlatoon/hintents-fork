@@ -12,7 +12,7 @@ import (
 	"github.com/dotandev/hintents/internal/errors"
 )
 
-func loadFromEnv(cfg *Config) error {
+func loadFromEnv(cfg *Config) error { //nolint:unused
 	if v := os.Getenv("ERST_RPC_URL"); v != "" {
 		cfg.RpcUrl = v
 	}
@@ -195,6 +195,18 @@ func (c *Config) parseTOML(content string) error {
 				return errors.WrapValidationError("max_cache_size must be a valid size (e.g., 500MB)")
 			}
 			c.MaxCacheSize = n
+		case "failure_threshold":
+			n, err := strconv.Atoi(value)
+			if err != nil {
+				return errors.WrapValidationError("failure_threshold must be an integer")
+			}
+			c.FailureThreshold = n
+		case "retry_timeout":
+			n, err := strconv.Atoi(value)
+			if err != nil {
+				return errors.WrapValidationError("retry_timeout must be an integer")
+			}
+			c.RetryTimeout = n
 		}
 	}
 

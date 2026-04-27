@@ -17,10 +17,10 @@ import (
 
 const (
 	defaultContractSearchLimit    = 20
-	defaultContractSearchPages      = 20
-	defaultContractSearchPageSize   = 200
-	maxContractSearchPagesHardCap   = 500
-	stellarStrkeyAccountMinLen      = 56
+	defaultContractSearchPages    = 20
+	defaultContractSearchPageSize = 200
+	maxContractSearchPagesHardCap = 500
+	stellarStrkeyAccountMinLen    = 56
 )
 
 // SearchContractsOptions configures contract discovery against Horizon /contracts.
@@ -178,7 +178,7 @@ func fetchContractPage(
 	if err != nil {
 		return nil, "", 0, fmt.Errorf("fetch contracts: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		return nil, "", 0, fmt.Errorf("contracts endpoint returned HTTP %d", resp.StatusCode)
