@@ -43,24 +43,16 @@ func TestDetector_FlawedContract(t *testing.T) {
 
 	findings := detector.Analyze(envelopeXdr, "", events, logs)
 
-	require.NotEmpty(t, findings, "Expected multiple findings for flawed contract")
+	require.NotEmpty(t, findings, "Expected multiple findings for flawed contract, got none")
 	t.Logf("Detected %d security findings", len(findings))
 
-	for _, f := range findings {
-		t.Logf("Finding: [%s] %s - %s", f.Type, f.Severity, f.Title)
-	}
-
-	// Assert specific findings we expect from this fixture
-	require.True(t, containsFinding(findings, "Integer Overflow"), "Missing expected overflow finding")
-	require.True(t, containsFinding(findings, "Authorization Bypass"), "Missing expected auth bypass finding")
-	require.True(t, containsFinding(findings, "Panic"), "Missing expected panic finding")
-	require.True(t, containsFinding(findings, "Large Value Transfer"), "Missing expected large transfer finding")
-
-	// Verify distinction between verified risks and heuristic warnings
+	findingTitles := make([]string, 0, len(findings))
 	verifiedCount := 0
 	heuristicCount := 0
 
 	for _, f := range findings {
+		t.Logf("Finding: [%s] %s - %s", f.Type, f.Severity, f.Title)
+		findingTitles = append(findingTitles, f.Title)
 		switch f.Type {
 		case FindingVerifiedRisk:
 			verifiedCount++
@@ -69,19 +61,17 @@ func TestDetector_FlawedContract(t *testing.T) {
 		}
 	}
 
-	require.Greater(t, verifiedCount, 0, "Expected at least one verified risk")
-	require.Greater(t, heuristicCount, 0, "Expected at least one heuristic warning")
+	// Assert specific findings we expect from this fixture
+	require.Contains(t, findingTitles, "Integer Overflow/Underflow Detected", "Missing expected overflow finding")
+	require.Contains(t, findingTitles, "Potential Authorization Bypass", "Missing expected auth bypass finding")
+	require.Contains(t, findingTitles, "Contract Panic/Trap", "Missing expected panic finding")
+	require.Contains(t, findingTitles, "Large Value Transfer Detected", "Missing expected large transfer finding")
+
+	// Verify distinction between verified risks and heuristic warnings
+	require.GreaterOrEqual(t, verifiedCount, 1, "Expected at least one verified risk")
+	require.GreaterOrEqual(t, heuristicCount, 1, "Expected at least one heuristic warning")
 
 	t.Logf("Summary: %d verified risks, %d heuristic warnings", verifiedCount, heuristicCount)
-}
-
-func containsFinding(findings []Finding, titleSubstring string) bool {
-	for _, f := range findings {
-		if strings.Contains(f.Title, titleSubstring) {
-			return true
-		}
-	}
-	return false
 }
 
 // TestDetector_TypeDistinction verifies clear distinction between risk types
