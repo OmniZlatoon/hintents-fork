@@ -22,6 +22,29 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func joinPath(parts ...string) string {
+	return strings.Join(parts, "/")
+}
+
+// FriendlyPath replaces the user's home directory with ~ for better readability
+func FriendlyPath(path string) string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return path
+	}
+
+	// Normalize both paths to use forward slashes for comparison
+	normalizedPath := filepath.ToSlash(path)
+	normalizedHomeDir := filepath.ToSlash(homeDir)
+
+	// Replace home directory with ~
+	if strings.HasPrefix(normalizedPath, normalizedHomeDir) {
+		return "~" + strings.TrimPrefix(normalizedPath, normalizedHomeDir)
+	}
+
+	return path
+}
+
 // DependencyID is a unique identifier for each dependency (Issue #8: type-safe dispatch)
 type DependencyID string
 
@@ -128,7 +151,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		fmt.Println()
 
 		if verbose && dep.Path != "" {
-			fmt.Printf("  Path: %s\n", dep.Path)
+			fmt.Printf("  Path: %s\n", FriendlyPath(dep.Path))
 		}
 
 		if !dep.Installed && dep.FixHint != "" {
@@ -293,24 +316,51 @@ func checkSimulator(verbose bool) DependencyStatus {
 
 	// Also check in PATH
 	if simPath, err := exec.LookPath("erst-sim"); err == nil {
-		dep.Installed = true
-		dep.Path = simPath
-		dep.Version = "in PATH"
-		return dep
+		versionOutput, validationErr := validateSimulatorBinary(simPath)
+		if validationErr == nil {
+			dep.Installed = true
+			dep.Path = simPath
+			dep.Version = strings.TrimSpace(versionOutput)
+			return dep
+		}
+		dep.FixHint = validationErr.Error()
 	}
 
 	// Check relative paths
 	for _, path := range possiblePaths {
 		if _, err := os.Stat(path); err == nil {
 			absPath, _ := filepath.Abs(path)
+			versionOutput, validationErr := validateSimulatorBinary(absPath)
+			if validationErr != nil {
+				dep.FixHint = validationErr.Error()
+				continue
+			}
 			dep.Installed = true
 			dep.Path = absPath
-			dep.Version = "local build"
+			dep.Version = strings.TrimSpace(versionOutput)
 			return dep
 		}
 	}
 
 	return dep
+}
+
+func validateSimulatorBinary(path string) (string, error) {
+	cmd := exec.Command(path, "--version")
+	output, err := cmd.CombinedOutput()
+	text := strings.TrimSpace(string(output))
+	if err != nil {
+		if text == "" {
+			return "", fmt.Errorf("erst-sim version check failed with non-zero exit code: %v", err)
+		}
+		return "", fmt.Errorf("erst-sim version check failed with non-zero exit code: %v (%s)", err, text)
+	}
+
+	if !strings.Contains(text, "erst-sim") {
+		return "", fmt.Errorf("erst-sim validation failed: --version output did not contain \"erst-sim\"")
+	}
+
+	return text, nil
 }
 
 // checkCacheDir verifies the cache directory exists (NEW: Issue #9)
@@ -328,7 +378,7 @@ func checkCacheDir(verbose bool) DependencyStatus {
 		return dep
 	}
 
-	cacheDir := filepath.Join(homeDir, ".erst")
+	cacheDir := joinPath(homeDir, ".erst")
 
 	// Check if cache directory exists
 	if _, err := os.Stat(cacheDir); err != nil {
@@ -342,7 +392,7 @@ func checkCacheDir(verbose bool) DependencyStatus {
 	// Verify subdirectories exist
 	requiredDirs := []string{DirTransactions, DirProtocols, DirContracts}
 	for _, subdir := range requiredDirs {
-		path := filepath.Join(cacheDir, subdir)
+		path := joinPath(cacheDir, subdir)
 		if _, err := os.Stat(path); err != nil {
 			dep.FixHint = fmt.Sprintf("Missing subdirectory: %s", subdir)
 			return dep
@@ -370,7 +420,7 @@ func checkProtocolRegistry(verbose bool) DependencyStatus {
 		return dep
 	}
 
-	registryFile := filepath.Join(homeDir, ".erst", "protocols", "registered.json")
+	registryFile := joinPath(homeDir, ".erst", "protocols", "registered.json")
 
 	// Check if registry file exists and is valid
 	if _, err := os.Stat(registryFile); err != nil {
@@ -441,7 +491,7 @@ func checkConfigTOML(verbose bool) DependencyStatus {
 
 	paths := []string{
 		".erst.toml",
-		filepath.Join(os.ExpandEnv("$HOME"), ".erst.toml"),
+		joinPath(os.ExpandEnv("$HOME"), ".erst.toml"),
 		"/etc/erst/config.toml",
 	}
 
