@@ -76,9 +76,9 @@ Get started with 'erst debug --help' or visit the documentation.`,
 
 		return nil
 	},
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	Version:       Version,
+	SilenceUsage:     true,
+	SilenceErrors:    true,
+	Version:          Version,
 	TraverseChildren: true,
 }
 
