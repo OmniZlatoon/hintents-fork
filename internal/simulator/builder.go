@@ -20,10 +20,10 @@ import (
 //		WithLedgerEntry("key1", "value1").
 //		Build()
 type SimulationRequestBuilder struct {
-	envelopeXdr     string
-	resultMetaXdr   string
-	ledgerEntries   map[string]string
-	restorePreamble map[string]interface{}
+	envelopeXdr               string
+	resultMetaXdr             string
+	ledgerEntries             map[string]string
+	restorePreamble           map[string]interface{}
 	mockBaseFee               *uint32
 	enableOptimizationAdvisor bool
 	errors                    []string

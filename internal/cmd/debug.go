@@ -885,8 +885,8 @@ func runLocalWasmReplay() error {
 
 func newLocalWasmSimulationRequest(forceNoCache bool) *simulator.SimulationRequest {
 	req := &simulator.SimulationRequest{
-		EnvelopeXdr:     "", // Empty for local replay
-		ResultMetaXdr:   "", // Empty for local replay
+		EnvelopeXdr:     "",  // Empty for local replay
+		ResultMetaXdr:   "",  // Empty for local replay
 		LedgerEntries:   nil, // Mock state will be generated
 		WasmPath:        &wasmPath,
 		NoCache:         noCacheFlag || forceNoCache,
@@ -1426,7 +1426,7 @@ func diffResults(res1, res2 *simulator.SimulationResponse, net1, net2 string) {
 			inRes1 := i < len(res1.Events)
 			inRes2 := i < len(res2.Events)
 
-			var ev1Raw, ev2Raw string // raw event strings for comparison
+			var ev1Raw, ev2Raw string         // raw event strings for comparison
 			var ev1Display, ev2Display string // display strings (may be colored)
 
 			if inRes1 {
@@ -1767,4 +1767,3 @@ func displaySourceLocation(loc *simulator.SourceLocation) {
 	}
 	fmt.Println()
 }
-

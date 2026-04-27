@@ -14,9 +14,9 @@ func TestDiffLedgerEntries(t *testing.T) {
 		"key3": "value3",
 	}
 	after := map[string]string{
-		"key1": "value1",       // unchanged
-		"key2": "value2_new",   // modified
-		"key4": "value4",       // added
+		"key1": "value1",     // unchanged
+		"key2": "value2_new", // modified
+		"key4": "value4",     // added
 	}
 
 	entries := DiffLedgerEntries(before, after)

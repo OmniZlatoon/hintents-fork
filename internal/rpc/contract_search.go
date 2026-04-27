@@ -17,10 +17,10 @@ import (
 
 const (
 	defaultContractSearchLimit    = 20
-	defaultContractSearchPages      = 20
-	defaultContractSearchPageSize   = 200
-	maxContractSearchPagesHardCap   = 500
-	stellarStrkeyAccountMinLen      = 56
+	defaultContractSearchPages    = 20
+	defaultContractSearchPageSize = 200
+	maxContractSearchPagesHardCap = 500
+	stellarStrkeyAccountMinLen    = 56
 )
 
 // SearchContractsOptions configures contract discovery against Horizon /contracts.

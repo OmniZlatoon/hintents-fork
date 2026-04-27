@@ -609,4 +609,3 @@ func getTransactionStatus(tx hProtocol.Transaction) string {
 	}
 	return "failed"
 }
-

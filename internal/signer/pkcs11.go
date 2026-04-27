@@ -20,11 +20,11 @@ const (
 	ckoPrivateKey = 0x03 //nolint:unused
 	ckoPublicKey  = 0x02 //nolint:unused
 
-	ckaClass   = 0x00   //nolint:unused
-	ckaKeyType = 0x100  //nolint:unused
-	ckaLabel   = 0x03   //nolint:unused
-	ckaID      = 0x102  //nolint:unused
-	ckaECPoint = 0x181  //nolint:unused
+	ckaClass   = 0x00  //nolint:unused
+	ckaKeyType = 0x100 //nolint:unused
+	ckaLabel   = 0x03  //nolint:unused
+	ckaID      = 0x102 //nolint:unused
+	ckaECPoint = 0x181 //nolint:unused
 
 	ckmEDDSA = 0x1050
 	ckkEDDSA = 0x42 //nolint:unused
@@ -102,9 +102,9 @@ type Pkcs11Signer struct {
 	pubKey    []byte
 
 	// C_* function pointers resolved from the loaded library.
-	fnInitialize      func(unsafe.Pointer) uint64                        //nolint:unused
-	fnGetSlotList     func(bool, unsafe.Pointer, *uint64) uint64         //nolint:unused
-	fnGetTokenInfo    func(uint64, unsafe.Pointer) uint64                //nolint:unused
+	fnInitialize      func(unsafe.Pointer) uint64                                          //nolint:unused
+	fnGetSlotList     func(bool, unsafe.Pointer, *uint64) uint64                           //nolint:unused
+	fnGetTokenInfo    func(uint64, unsafe.Pointer) uint64                                  //nolint:unused
 	fnOpenSession     func(uint64, uint64, unsafe.Pointer, unsafe.Pointer, *uint64) uint64 //nolint:unused
 	fnCloseSession    func(uint64) uint64
 	fnLogin           func(uint64, uint64, unsafe.Pointer, uint64) uint64 //nolint:unused

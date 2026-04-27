@@ -11,20 +11,20 @@ import (
 
 // NodeHealthStats tracks telemetry data for a single RPC node.
 type NodeHealthStats struct {
-	URL            string        `json:"url"`
-	TotalRequests  int64         `json:"total_requests"`
-	SuccessCount   int64         `json:"success_count"`
-	FailureCount   int64         `json:"failure_count"`
-	TotalLatency   time.Duration `json:"-"`
-	AvgLatencyMs   float64       `json:"avg_latency_ms"`
-	MinLatencyMs   float64       `json:"min_latency_ms"`
-	MaxLatencyMs   float64       `json:"max_latency_ms"`
-	LastUpdated    time.Time     `json:"last_updated"`
-	CircuitOpen    bool          `json:"circuit_open"`
-	SuccessRate    float64       `json:"success_rate"`
-	HealthScore    float64       `json:"health_score"`
-	recentLatency  []time.Duration
-	maxSamples     int
+	URL           string        `json:"url"`
+	TotalRequests int64         `json:"total_requests"`
+	SuccessCount  int64         `json:"success_count"`
+	FailureCount  int64         `json:"failure_count"`
+	TotalLatency  time.Duration `json:"-"`
+	AvgLatencyMs  float64       `json:"avg_latency_ms"`
+	MinLatencyMs  float64       `json:"min_latency_ms"`
+	MaxLatencyMs  float64       `json:"max_latency_ms"`
+	LastUpdated   time.Time     `json:"last_updated"`
+	CircuitOpen   bool          `json:"circuit_open"`
+	SuccessRate   float64       `json:"success_rate"`
+	HealthScore   float64       `json:"health_score"`
+	recentLatency []time.Duration
+	maxSamples    int
 }
 
 // HealthReport aggregates health statistics for all configured RPC nodes.
@@ -75,10 +75,10 @@ type HealthCollector struct {
 }
 
 const (
-	defaultMaxSamples     = 100
-	latencyWeight         = 0.4
-	successRateWeight     = 0.6
-	recentLatencySamples  = 10
+	defaultMaxSamples    = 100
+	latencyWeight        = 0.4
+	successRateWeight    = 0.6
+	recentLatencySamples = 10
 )
 
 // NewHealthCollector creates a new health collector with default settings.

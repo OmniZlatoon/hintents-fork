@@ -429,7 +429,7 @@ type wsConn struct {
 func (c *wsConn) close() {
 	// Send a close frame before closing the underlying connection.
 	c.raw.SetWriteDeadline(time.Now().Add(1 * time.Second)) //nolint:errcheck
-	_ = wsWriteFrame(c.raw, nil) // best-effort
+	_ = wsWriteFrame(c.raw, nil)                            // best-effort
 	c.raw.Close()
 }
 

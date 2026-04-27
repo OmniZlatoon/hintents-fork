@@ -49,9 +49,9 @@ func DecodeEvents(eventsXdr []string, maxDepth int) (*CallNode, error) {
 		}
 
 		decoded := simulator.DiagnosticEvent{
-			EventType:  fmt.Sprintf("%v", diag.Event.Type),
-			Topics:     make([]string, 0, len(diag.Event.Body.V0.Topics)),
-			Data:       fmt.Sprintf("%v", diag.Event.Body.V0.Data.Type),
+			EventType:                fmt.Sprintf("%v", diag.Event.Type),
+			Topics:                   make([]string, 0, len(diag.Event.Body.V0.Topics)),
+			Data:                     fmt.Sprintf("%v", diag.Event.Body.V0.Data.Type),
 			InSuccessfulContractCall: diag.InSuccessfulContractCall,
 		}
 		if diag.Event.ContractId != nil {
@@ -178,7 +178,6 @@ func DecodeDiagnosticEvents(events []simulator.DiagnosticEvent, maxDepth int) (*
 
 	return root, nil
 }
-
 
 func isFunctionCall(e DecodedEvent) bool {
 	return len(e.Topics) > 0 && e.Topics[0] == "fn_call"

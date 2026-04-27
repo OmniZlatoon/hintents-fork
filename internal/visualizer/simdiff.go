@@ -18,19 +18,19 @@ const (
 
 // LedgerDiffEntry represents a single ledger entry change.
 type LedgerDiffEntry struct {
-	Key      string
-	Before   string // empty string means the entry did not exist before
-	After    string // empty string means the entry was removed
+	Key        string
+	Before     string // empty string means the entry did not exist before
+	After      string // empty string means the entry was removed
 	ChangeKind ledgerChangeKind
 }
 
 type ledgerChangeKind int
 
 const (
-	ledgerAdded    ledgerChangeKind = iota // entry exists only in After
-	ledgerRemoved                          // entry exists only in Before
-	ledgerModified                         // entry exists in both but values differ
-	ledgerUnchanged                        // entry exists in both with same value
+	ledgerAdded     ledgerChangeKind = iota // entry exists only in After
+	ledgerRemoved                           // entry exists only in Before
+	ledgerModified                          // entry exists in both but values differ
+	ledgerUnchanged                         // entry exists in both with same value
 )
 
 // DiffLedgerEntries computes the diff between two ledger entry maps.
