@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -23,7 +24,11 @@ import (
 )
 
 func joinPath(parts ...string) string {
-	return strings.Join(parts, "/")
+	cleaned := make([]string, 0, len(parts))
+	for _, part := range parts {
+		cleaned = append(cleaned, filepath.ToSlash(part))
+	}
+	return path.Join(cleaned...)
 }
 
 // FriendlyPath replaces the user's home directory with ~ for better readability
