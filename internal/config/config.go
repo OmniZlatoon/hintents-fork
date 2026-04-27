@@ -106,7 +106,7 @@ var defaultConfig = &Config{
 	SimulatorPath:    "",
 	LogLevel:         "info",
 	CachePath:        joinPath(os.ExpandEnv("$HOME"), ".erst", "cache"),
-	RequestTimeout:  defaultRequestTimeout,
+	RequestTimeout:   defaultRequestTimeout,
 	MaxCacheSize:     0,
 	MaxTraceDepth:    50,
 	FailureThreshold: defaultFailureThreshold,
