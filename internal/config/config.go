@@ -97,20 +97,12 @@ var validLogLevels = map[string]bool{
 }
 
 var defaultConfig = &Config{
-	RpcUrl:         "https://soroban-testnet.stellar.org",
-	Network:        NetworkTestnet,
-	SimulatorPath:  "",
-	LogLevel:       "info",
-	CachePath:      joinPath(os.ExpandEnv("$HOME"), ".erst", "cache"),
-	RequestTimeout: defaultRequestTimeout,
-	MaxCacheSize:   0,
-	MaxTraceDepth:  50,
 	RpcUrl:           endpoints.SorobanTestnet,
 	Network:          NetworkTestnet,
 	SimulatorPath:    "",
 	LogLevel:         "info",
 	CachePath:        joinPath(os.ExpandEnv("$HOME"), ".erst", "cache"),
-	RequestTimeout:   defaultRequestTimeout,
+	RequestTimeout:  defaultRequestTimeout,
 	MaxCacheSize:     0,
 	MaxTraceDepth:    50,
 	FailureThreshold: defaultFailureThreshold,
