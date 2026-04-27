@@ -134,7 +134,7 @@ func (m *MultiSigContractAuth) ValidateAuth(contractID string, method string, pa
 	}
 
 	if len(signatures) < m.RequiredSignatures {
-		return false, fmt.Errorf("THRESHOLD_NOT_MET: insufficient signatures: got %d, required %d", len(signatures), m.RequiredSignatures)
+		return false, nil
 	}
 
 	totalWeight := uint32(0)
@@ -157,10 +157,7 @@ func (m *MultiSigContractAuth) ValidateAuth(contractID string, method string, pa
 		totalWeight += weight
 	}
 
-	if totalWeight < m.SignerThreshold {
-		return false, fmt.Errorf("THRESHOLD_NOT_MET: total weight %d below threshold %d", totalWeight, m.SignerThreshold)
-	}
-	return true, nil
+	return totalWeight >= m.SignerThreshold, nil
 }
 
 type RecoveryAuth struct {
