@@ -60,6 +60,12 @@ const (
 	DepRPC               DependencyID = "rpc"
 )
 
+const (
+	DirTransactions = "transactions"
+	DirProtocols    = "protocols"
+	DirContracts    = "contracts"
+)
+
 type DependencyStatus struct {
 	ID        DependencyID // NEW: unique identifier for type-safe dispatch
 	Name      string
@@ -310,24 +316,51 @@ func checkSimulator(verbose bool) DependencyStatus {
 
 	// Also check in PATH
 	if simPath, err := exec.LookPath("erst-sim"); err == nil {
-		dep.Installed = true
-		dep.Path = simPath
-		dep.Version = "in PATH"
-		return dep
+		versionOutput, validationErr := validateSimulatorBinary(simPath)
+		if validationErr == nil {
+			dep.Installed = true
+			dep.Path = simPath
+			dep.Version = strings.TrimSpace(versionOutput)
+			return dep
+		}
+		dep.FixHint = validationErr.Error()
 	}
 
 	// Check relative paths
 	for _, path := range possiblePaths {
 		if _, err := os.Stat(path); err == nil {
 			absPath, _ := filepath.Abs(path)
+			versionOutput, validationErr := validateSimulatorBinary(absPath)
+			if validationErr != nil {
+				dep.FixHint = validationErr.Error()
+				continue
+			}
 			dep.Installed = true
 			dep.Path = absPath
-			dep.Version = "local build"
+			dep.Version = strings.TrimSpace(versionOutput)
 			return dep
 		}
 	}
 
 	return dep
+}
+
+func validateSimulatorBinary(path string) (string, error) {
+	cmd := exec.Command(path, "--version")
+	output, err := cmd.CombinedOutput()
+	text := strings.TrimSpace(string(output))
+	if err != nil {
+		if text == "" {
+			return "", fmt.Errorf("erst-sim version check failed with non-zero exit code: %v", err)
+		}
+		return "", fmt.Errorf("erst-sim version check failed with non-zero exit code: %v (%s)", err, text)
+	}
+
+	if !strings.Contains(text, "erst-sim") {
+		return "", fmt.Errorf("erst-sim validation failed: --version output did not contain \"erst-sim\"")
+	}
+
+	return text, nil
 }
 
 // checkCacheDir verifies the cache directory exists (NEW: Issue #9)
@@ -357,7 +390,7 @@ func checkCacheDir(verbose bool) DependencyStatus {
 	}
 
 	// Verify subdirectories exist
-	requiredDirs := []string{"transactions", "protocols", "contracts"}
+	requiredDirs := []string{DirTransactions, DirProtocols, DirContracts}
 	for _, subdir := range requiredDirs {
 		path := joinPath(cacheDir, subdir)
 		if _, err := os.Stat(path); err != nil {
