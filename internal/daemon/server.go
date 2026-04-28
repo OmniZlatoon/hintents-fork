@@ -24,9 +24,10 @@ import (
 
 // Server represents the JSON-RPC daemon server
 type Server struct {
-	rpcClient *stellarrpc.Client
-	simulator *simulator.Runner
-	authToken string
+	rpcClient   *stellarrpc.Client
+	simulator   *simulator.Runner
+	cacheWarmer *CacheWarmer
+	authToken   string
 }
 
 // Config holds daemon configuration
@@ -95,9 +96,10 @@ func NewServer(config Config) (*Server, error) {
 	}
 
 	return &Server{
-		rpcClient: client,
-		simulator: sim,
-		authToken: config.AuthToken,
+		rpcClient:   client,
+		simulator:   sim,
+		cacheWarmer: NewCacheWarmer(client),
+		authToken:   config.AuthToken,
 	}, nil
 }
 
@@ -235,6 +237,11 @@ func (s *Server) Start(ctx context.Context, port string) error {
 
 	srv := &http.Server{
 		Addr: ":" + port,
+	}
+
+	// Start cache warmer
+	if s.cacheWarmer != nil {
+		go s.cacheWarmer.Start(ctx)
 	}
 
 	// Start server in goroutine

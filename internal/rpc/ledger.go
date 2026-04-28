@@ -5,10 +5,12 @@ package rpc
 
 import (
 	"encoding/base64"
+	"fmt"
 	"time"
 
 	"github.com/dotandev/hintents/internal/errors"
 	hProtocol "github.com/stellar/go-stellar-sdk/protocols/horizon"
+	"github.com/stellar/go-stellar-sdk/strkey"
 	"github.com/stellar/go-stellar-sdk/xdr"
 )
 
@@ -302,4 +304,68 @@ func ledgerKeyFromEntry(entry xdr.LedgerEntry) *xdr.LedgerKey {
 	}
 
 	return nil
+}
+
+// NewContractInstanceKey creates a LedgerKey for a contract instance data entry.
+func NewContractInstanceKey(contractID string) (xdr.LedgerKey, error) {
+	var hash xdr.Hash
+	raw, err := strkey.Decode(strkey.VersionByteContract, contractID)
+	if err != nil {
+		return xdr.LedgerKey{}, fmt.Errorf("invalid contract ID: %w", err)
+	}
+	copy(hash[:], raw)
+
+	return xdr.LedgerKey{
+		Type: xdr.LedgerEntryTypeContractData,
+		ContractData: &xdr.LedgerKeyContractData{
+			Contract: xdr.ScAddress{
+				Type:       xdr.ScAddressTypeScAddressTypeContract,
+				ContractId: &hash,
+			},
+			Key: xdr.ScVal{
+				Type: xdr.ScValTypeScvLedgerKeyContractInstance,
+			},
+			Durability: xdr.ContractDataDurabilityPersistent,
+		},
+	}, nil
+}
+
+// NewContractCodeKey creates a LedgerKey for contract executable WASM code.
+func NewContractCodeKey(wasmHash [32]byte) (xdr.LedgerKey, error) {
+	return xdr.LedgerKey{
+		Type: xdr.LedgerEntryTypeContractCode,
+		ContractCode: &xdr.LedgerKeyContractCode{
+			Hash: xdr.Hash(wasmHash),
+		},
+	}, nil
+}
+
+// ParseWasmHashFromInstance extracts the WASM hash from a base64-encoded ContractInstance ledger entry.
+func ParseWasmHashFromInstance(entryXDR string) ([32]byte, bool) {
+	var hash [32]byte
+	data, err := base64.StdEncoding.DecodeString(entryXDR)
+	if err != nil {
+		return hash, false
+	}
+
+	var entry xdr.LedgerEntry
+	if err := entry.UnmarshalBinary(data); err != nil {
+		return hash, false
+	}
+
+	cData := entry.Data.ContractData
+	if cData == nil || cData.Key.Type != xdr.ScValTypeScvLedgerKeyContractInstance {
+		return hash, false
+	}
+
+	if cData.Val.Type != xdr.ScValTypeScvContractInstance || cData.Val.Instance == nil {
+		return hash, false
+	}
+
+	exec := cData.Val.Instance.Executable
+	if exec.Type != xdr.ContractExecutableTypeContractExecutableWasm || exec.WasmHash == nil {
+		return hash, false
+	}
+
+	return [32]byte(*exec.WasmHash), true
 }
