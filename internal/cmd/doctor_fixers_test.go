@@ -15,18 +15,17 @@ func TestFixMissingCacheDir(t *testing.T) {
 	// Create temporary home directory for this test
 	tmpHomeDir := t.TempDir()
 
-	// Save original HOME
+	// Save original env
 	originalHome := os.Getenv("HOME")
+	originalUserProfile := os.Getenv("USERPROFILE")
 	defer func() {
-		if originalHome != "" {
-			_ = os.Setenv("HOME", originalHome)
-		}
+		_ = os.Setenv("HOME", originalHome)
+		_ = os.Setenv("USERPROFILE", originalUserProfile)
 	}()
 
-	// Set HOME to temp directory for test isolation
-	if err := os.Setenv("HOME", tmpHomeDir); err != nil {
-		t.Fatalf("Failed to set HOME: %v", err)
-	}
+	// Set both to temp directory for test isolation
+	_ = os.Setenv("HOME", tmpHomeDir)
+	_ = os.Setenv("USERPROFILE", tmpHomeDir)
 
 	// Test the fixer
 	err := FixMissingCacheDir(false)
@@ -55,15 +54,14 @@ func TestFixProtocolRegistration(t *testing.T) {
 	tmpHomeDir := t.TempDir()
 
 	originalHome := os.Getenv("HOME")
+	originalUserProfile := os.Getenv("USERPROFILE")
 	defer func() {
-		if originalHome != "" {
-			_ = os.Setenv("HOME", originalHome)
-		}
+		_ = os.Setenv("HOME", originalHome)
+		_ = os.Setenv("USERPROFILE", originalUserProfile)
 	}()
 
-	if err := os.Setenv("HOME", tmpHomeDir); err != nil {
-		t.Fatalf("Failed to set HOME: %v", err)
-	}
+	_ = os.Setenv("HOME", tmpHomeDir)
+	_ = os.Setenv("USERPROFILE", tmpHomeDir)
 
 	// First create the cache directory
 	_ = FixMissingCacheDir(false)
@@ -147,12 +145,13 @@ func TestFixGoModDependencies(t *testing.T) {
 func BenchmarkFixMissingCacheDir(b *testing.B) {
 	tmpHomeDir := b.TempDir()
 	originalHome := os.Getenv("HOME")
+	originalUserProfile := os.Getenv("USERPROFILE")
 
 	_ = os.Setenv("HOME", tmpHomeDir)
+	_ = os.Setenv("USERPROFILE", tmpHomeDir)
 	defer func() {
-		if originalHome != "" {
-			_ = os.Setenv("HOME", originalHome)
-		}
+		_ = os.Setenv("HOME", originalHome)
+		_ = os.Setenv("USERPROFILE", originalUserProfile)
 	}()
 
 	b.ResetTimer()

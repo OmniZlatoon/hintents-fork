@@ -6,6 +6,7 @@ package watch
 import (
 	"context"
 	"fmt"
+	"io"
 	"testing"
 	"time"
 )
@@ -199,7 +200,7 @@ func TestPollContextCancellation(t *testing.T) {
 }
 
 func TestNewSpinner(t *testing.T) {
-	spinner := NewSpinner()
+	spinner := NewSpinnerWithWriter(io.Discard)
 
 	if spinner == nil {
 		t.Fatal("expected non-nil spinner")
@@ -212,26 +213,26 @@ func TestNewSpinner(t *testing.T) {
 }
 
 func TestSpinnerStartStop(t *testing.T) {
-	spinner := NewSpinner()
+	spinner := NewSpinnerWithWriter(io.Discard)
 	spinner.Start("Testing...")
 	time.Sleep(50 * time.Millisecond)
 	spinner.Stop()
 }
 
 func TestSpinnerMessages(t *testing.T) {
-	spinner := NewSpinner()
+	spinner := NewSpinnerWithWriter(io.Discard)
 	spinner.Start("Testing...")
 	time.Sleep(50 * time.Millisecond)
 	spinner.StopWithMessage("Test completed")
 
-	spinner2 := NewSpinner()
+	spinner2 := NewSpinnerWithWriter(io.Discard)
 	spinner2.Start("Testing error...")
 	time.Sleep(50 * time.Millisecond)
 	spinner2.StopWithError("Test failed")
 }
 
 func TestSpinnerDoubleStart(t *testing.T) {
-	spinner := NewSpinner()
+	spinner := NewSpinnerWithWriter(io.Discard)
 	spinner.Start("Testing...")
 	spinner.Start("Testing again...")
 	time.Sleep(50 * time.Millisecond)

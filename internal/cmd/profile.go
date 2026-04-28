@@ -198,9 +198,10 @@ func displayOptimizationReport(report *simulator.OptimizationReport, budget *sim
 		for _, tip := range report.Tips {
 			severity := tip.Severity
 			icon := "🟢 "
-			if severity == "High" {
+			switch severity {
+			case "High":
 				icon = "🔴 "
-			} else if severity == "Medium" {
+			case "Medium":
 				icon = "🟡 "
 			}
 			fmt.Printf("\n[%s%s] %s: %s\n", icon, severity, tip.Category, tip.Message)

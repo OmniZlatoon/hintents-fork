@@ -60,11 +60,11 @@ type Pkcs11Config struct {
 func Pkcs11ConfigFromEnv() (*Pkcs11Config, error) {
 	modulePath := os.Getenv("ERST_PKCS11_MODULE")
 	if modulePath == "" {
-		return nil, &SignerError{Op: "pkcs11", Msg: "ERST_PKCS11_MODULE is required"}
+		return nil, &Error{Op: "pkcs11", Msg: "ERST_PKCS11_MODULE is required"}
 	}
 	pin := os.Getenv("ERST_PKCS11_PIN")
 	if pin == "" {
-		return nil, &SignerError{Op: "pkcs11", Msg: "ERST_PKCS11_PIN is required"}
+		return nil, &Error{Op: "pkcs11", Msg: "ERST_PKCS11_PIN is required"}
 	}
 
 	return &Pkcs11Config{
@@ -128,7 +128,7 @@ type Pkcs11Signer struct {
 func NewPkcs11Signer(cfg Pkcs11Config) (*Pkcs11Signer, error) {
 	lib, err := plugin.Open(cfg.ModulePath)
 	if err != nil {
-		return nil, &SignerError{Op: "pkcs11", Msg: "failed to load PKCS#11 module", Err: err}
+		return nil, &Error{Op: "pkcs11", Msg: "failed to load PKCS#11 module", Err: err}
 	}
 
 	s := &Pkcs11Signer{
@@ -154,7 +154,7 @@ func (s *Pkcs11Signer) resolveFunctions() error {
 	lookup := func(name string) (plugin.Symbol, error) {
 		sym, err := s.lib.Lookup(name)
 		if err != nil {
-			return nil, &SignerError{Op: "pkcs11", Msg: fmt.Sprintf("symbol %s not found", name), Err: err}
+			return nil, &Error{Op: "pkcs11", Msg: fmt.Sprintf("symbol %s not found", name), Err: err}
 		}
 		return sym, nil
 	}
@@ -198,13 +198,13 @@ func (s *Pkcs11Signer) Sign(data []byte) ([]byte, error) {
 	defer s.mu.Unlock()
 
 	if s.fnSignInit == nil || s.fnSign == nil {
-		return nil, &SignerError{Op: "pkcs11", Msg: "PKCS#11 session not initialized"}
+		return nil, &Error{Op: "pkcs11", Msg: "PKCS#11 session not initialized"}
 	}
 
 	mech := pkcs11Mechanism{mechanism: ckmEDDSA}
 	rv := s.fnSignInit(s.session, unsafe.Pointer(&mech), s.keyHandle)
 	if rv != ckrOK {
-		return nil, &SignerError{Op: "pkcs11", Msg: fmt.Sprintf("C_SignInit failed: 0x%x", rv)}
+		return nil, &Error{Op: "pkcs11", Msg: fmt.Sprintf("C_SignInit failed: 0x%x", rv)}
 	}
 
 	sigLen := uint64(64) // Ed25519 signatures are 64 bytes
@@ -215,7 +215,7 @@ func (s *Pkcs11Signer) Sign(data []byte) ([]byte, error) {
 		unsafe.Pointer(&sig[0]), &sigLen,
 	)
 	if rv != ckrOK {
-		return nil, &SignerError{Op: "pkcs11", Msg: fmt.Sprintf("C_Sign failed: 0x%x", rv)}
+		return nil, &Error{Op: "pkcs11", Msg: fmt.Sprintf("C_Sign failed: 0x%x", rv)}
 	}
 
 	return sig[:sigLen], nil
@@ -225,7 +225,7 @@ func (s *Pkcs11Signer) Sign(data []byte) ([]byte, error) {
 // initialization.
 func (s *Pkcs11Signer) PublicKey() ([]byte, error) {
 	if len(s.pubKey) == 0 {
-		return nil, &SignerError{Op: "pkcs11", Msg: "public key not available"}
+		return nil, &Error{Op: "pkcs11", Msg: "public key not available"}
 	}
 	out := make([]byte, len(s.pubKey))
 	copy(out, s.pubKey)
@@ -274,7 +274,7 @@ func (s *Pkcs11Signer) buildKeyTemplate() ([]pkcs11Attribute, error) { //nolint:
 	if s.config.KeyIDHex != "" {
 		idBytes, err := hex.DecodeString(s.config.KeyIDHex)
 		if err != nil {
-			return nil, &SignerError{Op: "pkcs11", Msg: "invalid key ID hex", Err: err}
+			return nil, &Error{Op: "pkcs11", Msg: "invalid key ID hex", Err: err}
 		}
 		attrs = append(attrs, pkcs11Attribute{
 			typ:    ckaID,

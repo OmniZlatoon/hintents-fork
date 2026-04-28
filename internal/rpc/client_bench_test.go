@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	hProtocol "github.com/stellar/go/protocols/horizon"
+	hProtocol "github.com/stellar/go-stellar-sdk/protocols/horizon"
 )
 
 // ==================== Compute-Heavy Benchmarks ====================
@@ -382,7 +382,7 @@ func BenchmarkHTTPRoundTrip(b *testing.B) {
 				b.Fatal(err)
 			}
 			_, _ = io.Copy(io.Discard, resp.Body)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 	})
 
@@ -396,7 +396,7 @@ func BenchmarkHTTPRoundTrip(b *testing.B) {
 				b.Fatal(err)
 			}
 			_, _ = io.Copy(io.Discard, resp.Body)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 	})
 }
@@ -439,7 +439,7 @@ func BenchmarkJSONRPCRoundTrip(b *testing.B) {
 			b.Fatal(err)
 		}
 		respBytes, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 
 		var rpcResp GetLedgerEntriesResponse
 		_ = json.Unmarshal(respBytes, &rpcResp)

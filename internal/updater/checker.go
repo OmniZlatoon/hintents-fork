@@ -126,7 +126,7 @@ func (c *Checker) fetchLatestVersion(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Handle rate limiting or other errors silently
 	if resp.StatusCode != http.StatusOK {
@@ -172,7 +172,7 @@ func (c *Checker) FetchReleaseInfo(ctx context.Context, version string) (*GitHub
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, fmt.Errorf("release %s not found", version)

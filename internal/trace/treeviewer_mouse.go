@@ -46,13 +46,13 @@ func (tv *TreeViewerWithMouse) StartWithMouse() error {
 	if err := tv.enableRawMode(); err != nil {
 		return fmt.Errorf("failed to enable raw mode: %w", err)
 	}
-	defer tv.restoreTerminalState(initialTermState) //nolint:errcheck
+	defer func() { _ = tv.restoreTerminalState(initialTermState) }() //nolint:errcheck
 
 	// Enable mouse tracking
 	if err := tv.mouseTracker.Enable(); err != nil {
 		return fmt.Errorf("failed to enable mouse tracking: %w", err)
 	}
-	defer tv.mouseTracker.Disable() //nolint:errcheck
+	defer func() { _ = tv.mouseTracker.Disable() }() //nolint:errcheck
 
 	// Build initial tree
 	nodes := make([]*TraceNode, 0)
@@ -136,23 +136,23 @@ func (tv *TreeViewerWithMouse) handleInput() bool {
 	}
 
 	// Handle keyboard input
-	switch {
-	case input == "n": // Next step/instruction
+	switch input {
+	case "n": // Next step/instruction
 		tv.NextStep()
 		tv.renderView()
 		return false
 
-	case input == "\x1b[A" || input == "k": // Up arrow or k
+	case "\x1b[A", "k": // Up arrow or k
 		tv.renderer.SelectUp()
 		tv.renderView()
 		return false
 
-	case input == "\x1b[B" || input == "j": // Down arrow or j
+	case "\x1b[B", "j": // Down arrow or j
 		tv.renderer.SelectDown()
 		tv.renderView()
 		return false
 
-	case input == " " || input == "\r": // Space or Enter - toggle expand
+	case " ", "\r": // Space or Enter - toggle expand
 		node := tv.renderer.GetSelectedNode()
 		if node != nil && !node.IsLeaf() {
 			node.ToggleExpanded()
@@ -161,7 +161,7 @@ func (tv *TreeViewerWithMouse) handleInput() bool {
 		}
 		return false
 
-	case input == "e": // Expand all
+	case "e": // Expand all
 		if root := tv.getTraceRoot(); root != nil {
 			root.ExpandAll()
 			tv.renderer.RenderTree(root)
@@ -169,7 +169,7 @@ func (tv *TreeViewerWithMouse) handleInput() bool {
 		}
 		return false
 
-	case input == "c": // Collapse all
+	case "c": // Collapse all
 		if root := tv.getTraceRoot(); root != nil {
 			root.CollapseAll()
 			tv.renderer.RenderTree(root)
@@ -177,10 +177,10 @@ func (tv *TreeViewerWithMouse) handleInput() bool {
 		}
 		return false
 
-	case input == "q" || input == "\x03": // q or Ctrl+C - quit
+	case "q", "\x03": // q or Ctrl+C - quit
 		return true
 
-	case input == "h": // Help
+	case "h": // Help
 		tv.showHelp()
 		return false
 	}
@@ -191,9 +191,10 @@ func (tv *TreeViewerWithMouse) handleInput() bool {
 // handleMouseEvent processes a mouse event
 func (tv *TreeViewerWithMouse) handleMouseEvent(evt *MouseEvent) {
 	if evt.IsScrollEvent() {
-		if evt.Button == ScrollUp {
+		switch evt.Button {
+		case ScrollUp:
 			tv.renderer.SelectUp()
-		} else if evt.Button == ScrollDown {
+		case ScrollDown:
 			tv.renderer.SelectDown()
 		}
 	} else if evt.IsClickEvent() {

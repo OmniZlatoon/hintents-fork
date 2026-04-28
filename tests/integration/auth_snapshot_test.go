@@ -13,7 +13,7 @@ import (
 func TestAuthSnapshotMultiSigFlow(t *testing.T) {
 	const accountID = "GACCOUNT"
 
-	tracker := authtrace.NewTracker(authtrace.AuthTraceConfig{MaxEventDepth: 100})
+	tracker := authtrace.NewTracker(authtrace.Config{MaxEventDepth: 100})
 	tracker.InitializeAccountContext(
 		accountID,
 		[]authtrace.SignerInfo{

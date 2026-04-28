@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dotandev/hintents/internal/endpoints"
 	"github.com/dotandev/hintents/internal/errors"
 	"github.com/dotandev/hintents/internal/logger"
 	"github.com/dotandev/hintents/internal/metrics"
@@ -327,7 +328,7 @@ func (c *Client) getLedgerEntriesAttempt(ctx context.Context, keysToFetch []stri
 		c.recordTelemetry(targetURL, duration, false)
 		return nil, errors.WrapRPCConnectionFailed(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusRequestEntityTooLarge {
 		// Record failed remote node response
@@ -516,7 +517,7 @@ func (c *Client) simulateTransactionAttempt(ctx context.Context, envelopeXdr str
 		c.recordTelemetry(targetURL, duration, false)
 		return nil, errors.WrapRPCConnectionFailed(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusRequestEntityTooLarge {
 		logger.Logger.Error("Soroban simulateTransaction response too large", "url", targetURL, "status", resp.StatusCode)
@@ -629,7 +630,7 @@ func (c *Client) getHealthAttempt(ctx context.Context) (healthResp *GetHealthRes
 		c.recordTelemetry(targetURL, duration, false)
 		return nil, errors.NewRPCError(errors.CodeRPCConnectionFailed, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -694,7 +695,7 @@ func fetchLatestFromSDF(ctx context.Context, url string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// 3. Decode using the struct you found earlier
 	var rpcResp GetLatestLedgerResponse
@@ -720,9 +721,9 @@ func (c *Client) CheckStaleness(ctx context.Context, network string) error {
 	var referenceURL string
 	switch strings.ToLower(network) {
 	case "testnet":
-		referenceURL = "https://soroban-testnet.stellar.org"
+		referenceURL = endpoints.SorobanTestnet
 	case "mainnet", "public":
-		referenceURL = "https://soroban.stellar.org"
+		referenceURL = endpoints.SorobanMainnet
 	default:
 		// Skip check for 'standalone' or unknown networks
 		return nil

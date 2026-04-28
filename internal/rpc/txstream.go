@@ -128,18 +128,16 @@ func (s *autoFallbackStreamer) Stream(ctx context.Context, hash string) (<-chan 
 	go func() {
 		defer close(out)
 
-		sawFinal := false
 		for status := range wsCh {
 			if !forwardTxStatus(ctx, out, status) {
 				return
 			}
 			if status.IsFinal() {
-				sawFinal = true
 				return
 			}
 		}
 
-		if sawFinal || ctx.Err() != nil {
+		if ctx.Err() != nil {
 			return
 		}
 
@@ -243,15 +241,15 @@ func (s *wsStreamer) poll(ctx context.Context, conn *wsConn, hash string, id int
 		return true
 	}
 
-	conn.raw.SetWriteDeadline(time.Now().Add(5 * time.Second)) //nolint:errcheck
+	_ = conn.raw.SetWriteDeadline(time.Now().Add(5 * time.Second)) //nolint:errcheck
 	if err := wsWriteFrame(conn.raw, reqBytes); err != nil {
 		logger.Logger.Warn("ws streamer: write frame", "error", err)
 		return true
 	}
 
-	conn.raw.SetReadDeadline(time.Now().Add(15 * time.Second)) //nolint:errcheck
+	_ = conn.raw.SetReadDeadline(time.Now().Add(15 * time.Second)) //nolint:errcheck
 	data, err := wsReadMessage(conn.br)
-	conn.raw.SetDeadline(time.Time{}) //nolint:errcheck
+	_ = conn.raw.SetDeadline(time.Time{}) //nolint:errcheck
 	if err != nil {
 		logger.Logger.Warn("ws streamer: read message", "error", err)
 		return true
@@ -366,7 +364,7 @@ func (s *pollingStreamer) queryTxStatus(ctx context.Context, hash string) (TxSta
 	if err != nil {
 		return TxStatus{}, fmt.Errorf("poll: http: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	respBytes, err := io.ReadAll(httpResp.Body)
 	if err != nil {
@@ -428,9 +426,9 @@ type wsConn struct {
 
 func (c *wsConn) close() {
 	// Send a close frame before closing the underlying connection.
-	c.raw.SetWriteDeadline(time.Now().Add(1 * time.Second)) //nolint:errcheck
-	_ = wsWriteFrame(c.raw, nil)                            // best-effort
-	c.raw.Close()
+	_ = c.raw.SetWriteDeadline(time.Now().Add(1 * time.Second)) //nolint:errcheck
+	_ = wsWriteFrame(c.raw, nil)                                // best-effort
+	_ = c.raw.Close()
 }
 
 // ---------------------------------------------------------------------------
@@ -478,7 +476,7 @@ func wsDialUpgrade(ctx context.Context, wsURL, token string) (*wsConn, error) {
 	reqSB.WriteString("\r\n")
 
 	if _, err := io.WriteString(raw, reqSB.String()); err != nil {
-		raw.Close()
+		_ = raw.Close()
 		return nil, fmt.Errorf("ws: send upgrade request: %w", err)
 	}
 
@@ -487,11 +485,11 @@ func wsDialUpgrade(ctx context.Context, wsURL, token string) (*wsConn, error) {
 	// Read status line.
 	statusLine, err := br.ReadString('\n')
 	if err != nil {
-		raw.Close()
+		_ = raw.Close()
 		return nil, fmt.Errorf("ws: read status line: %w", err)
 	}
 	if !strings.Contains(statusLine, "101") {
-		raw.Close()
+		_ = raw.Close()
 		return nil, fmt.Errorf("ws: expected 101 Switching Protocols, got: %s", strings.TrimSpace(statusLine))
 	}
 
@@ -500,7 +498,7 @@ func wsDialUpgrade(ctx context.Context, wsURL, token string) (*wsConn, error) {
 	for {
 		line, err := br.ReadString('\n')
 		if err != nil {
-			raw.Close()
+			_ = raw.Close()
 			return nil, fmt.Errorf("ws: read upgrade headers: %w", err)
 		}
 		line = strings.TrimRight(line, "\r\n")
@@ -513,7 +511,7 @@ func wsDialUpgrade(ctx context.Context, wsURL, token string) (*wsConn, error) {
 	}
 
 	if want := wsAcceptKey(key); gotAccept != want {
-		raw.Close()
+		_ = raw.Close()
 		return nil, fmt.Errorf("ws: accept key mismatch: got %q, want %q", gotAccept, want)
 	}
 

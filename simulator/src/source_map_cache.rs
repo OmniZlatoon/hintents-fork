@@ -519,7 +519,7 @@ mod tests {
             wasm_hash: wasm_hash.clone(),
             has_symbols: true,
             mappings,
-            created_at: 1234567890,
+            created_at: 1_234_567_890,
         };
 
         // Store the entry
@@ -536,7 +536,10 @@ mod tests {
     fn test_get_missing() {
         let (cache, _temp) = create_test_cache();
 
-        let result = cache.get("nonexistent_hash_12345678901234567890123456789012", false);
+        let result = cache.get(
+            "nonexistent_hash_1_234_567_8901_234_567_8901_234_567_89012",
+            false,
+        );
         assert!(result.is_none());
     }
 
@@ -551,7 +554,7 @@ mod tests {
             wasm_hash: wasm_hash.clone(),
             has_symbols: true,
             mappings: HashMap::new(),
-            created_at: 1234567890,
+            created_at: 1_234_567_890,
         };
 
         // Store an entry so it exists on disk
@@ -574,7 +577,7 @@ mod tests {
             wasm_hash: wasm_hash.clone(),
             has_symbols: true,
             mappings: HashMap::new(),
-            created_at: 1234567890,
+            created_at: 1_234_567_890,
         };
 
         cache.store(entry).unwrap();
@@ -611,7 +614,7 @@ mod tests {
             wasm_hash,
             has_symbols: true,
             mappings,
-            created_at: 1234567890,
+            created_at: 1_234_567_890,
         };
 
         cache.store(entry).unwrap();
@@ -634,7 +637,7 @@ mod tests {
             wasm_hash: wasm_hash.clone(),
             has_symbols: true,
             mappings: HashMap::new(),
-            created_at: 1234567890,
+            created_at: 1_234_567_890,
         };
 
         cache.store(entry).unwrap();
@@ -775,7 +778,7 @@ mod tests {
             wasm_hash,
             has_symbols: true,
             mappings: HashMap::new(),
-            created_at: 1234567890,
+            created_at: 1_234_567_890,
         };
 
         cache.store(entry).unwrap();

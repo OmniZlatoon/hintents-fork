@@ -82,7 +82,7 @@ Examples:
 
 		fmt.Printf("Transaction Envelope: %d bytes\n", len(resp.EnvelopeXdr))
 
-		config := authtrace.AuthTraceConfig{
+		config := authtrace.Config{
 			TraceCustomContracts: true,
 			CaptureSigDetails:    true,
 			MaxEventDepth:        1000,

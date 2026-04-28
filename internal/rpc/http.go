@@ -49,7 +49,7 @@ func (c *Client) getHTTPClient() HTTPClient {
 func createHTTPClient(token string, timeout time.Duration, middlewares ...Middleware) *http.Client {
 	cfg := DefaultRetryConfig()
 
-	var transport http.RoundTripper = http.DefaultTransport
+	transport := http.RoundTripper(http.DefaultTransport)
 	if token != "" {
 		transport = &authTransport{
 			token:     token,
@@ -90,7 +90,7 @@ func (c *Client) postRequest(ctx context.Context, payload interface{}, result in
 	if err != nil {
 		return fmt.Errorf("http request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)

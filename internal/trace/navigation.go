@@ -298,11 +298,11 @@ func copyMap(original map[string]interface{}) map[string]interface{} {
 		return make(map[string]interface{})
 	}
 
-	copy := make(map[string]interface{})
+	newMap := make(map[string]interface{})
 	for k, v := range original {
-		copy[k] = v
+		newMap[k] = v
 	}
-	return copy
+	return newMap
 }
 
 func (t *ExecutionTrace) getCurrentCallStack() []string {

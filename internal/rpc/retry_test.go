@@ -52,7 +52,7 @@ func TestRetryerSuccessFirstAttempt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected StatusOK, got %d", resp.StatusCode)
@@ -116,7 +116,7 @@ func TestRetryerOn429ThenSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected StatusOK, got %d", resp.StatusCode)
@@ -147,13 +147,13 @@ func TestRetryerMaxRetriesExceeded(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected error, got nil")
 		if resp != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 		return
 	}
 	if resp != nil {
 		t.Errorf("expected nil response on error, got response")
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -182,11 +182,11 @@ func TestRetryerContextCancellation(t *testing.T) {
 	resp, err := retrier.Do(ctx, req)
 	if err == nil {
 		t.Errorf("expected error from context cancellation, got nil")
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return
 	}
 	if resp != nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -213,13 +213,13 @@ func TestRetryAfterHeader(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected error (max retries), got nil")
 		if resp != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 		return
 	}
 	if resp != nil {
 		t.Errorf("expected nil response on error, got response")
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 
 	// Should have waited at least as long as Retry-After value
@@ -270,7 +270,7 @@ func TestRetryTransportSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected StatusOK, got %d", resp.StatusCode)
@@ -305,7 +305,7 @@ func TestRetryTransportRetry503(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected StatusOK, got %d", resp.StatusCode)
@@ -419,7 +419,7 @@ func TestRetryerRequestBodyNotReplayed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if attempts != 2 {
 		t.Errorf("expected 2 attempts, got %d", attempts)
@@ -448,7 +448,7 @@ func TestRetryerClonedRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 }
 
 func TestRetryerNilClient(t *testing.T) {
@@ -484,7 +484,7 @@ func TestRetryerResponseTooLarge(t *testing.T) {
 		t.Fatal("expected error for 413 response, got nil")
 	}
 	if resp != nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 
 	if attempts != 1 {
@@ -521,7 +521,7 @@ func TestRetryTransportResponseTooLarge(t *testing.T) {
 		t.Fatal("expected error for 413 response, got nil")
 	}
 	if resp != nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 
 	if attempts != 1 {
@@ -570,7 +570,7 @@ func BenchmarkRetryerSuccess(b *testing.B) {
 		req, _ := http.NewRequest("GET", server.URL, nil)
 		resp, _ := retrier.Do(context.Background(), req)
 		if resp != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 	}
 }
@@ -591,7 +591,7 @@ func BenchmarkRetryTransport(b *testing.B) {
 		req, _ := http.NewRequest("GET", server.URL, nil)
 		resp, _ := client.Do(req)
 		if resp != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 	}
 }

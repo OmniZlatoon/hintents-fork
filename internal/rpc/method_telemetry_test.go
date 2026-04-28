@@ -11,7 +11,7 @@ import (
 	"sync"
 	"testing"
 
-	hProtocol "github.com/stellar/go/protocols/horizon"
+	hProtocol "github.com/stellar/go-stellar-sdk/protocols/horizon"
 )
 
 type telemetryCall struct {
@@ -82,7 +82,7 @@ func TestWithMethodTelemetry(t *testing.T) {
 func TestGetTransaction_ReportsMethodTelemetry(t *testing.T) {
 	rec := &recordingMethodTelemetry{}
 	mock := &mockHorizonClient{
-		TransactionDetailFunc: func(hash string) (tx hProtocol.Transaction, err error) {
+		TransactionDetailFunc: func(_ string) (tx hProtocol.Transaction, err error) {
 			return hProtocol.Transaction{
 				EnvelopeXdr:   "env",
 				ResultXdr:     "res",

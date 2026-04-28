@@ -32,9 +32,9 @@ func TestParseLevelFromEnv(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.env, func(t *testing.T) {
 			if tt.env != "" {
-				os.Setenv("ERST_LOG_LEVEL", tt.env)
+				_ = os.Setenv("ERST_LOG_LEVEL", tt.env)
 			} else {
-				os.Unsetenv("ERST_LOG_LEVEL")
+				_ = os.Unsetenv("ERST_LOG_LEVEL")
 			}
 			lvl := parseLevelFromEnv()
 			if lvl != tt.expected {
@@ -319,17 +319,17 @@ func TestGetRustLogLevel(t *testing.T) {
 
 func TestGetRustLogFormat(t *testing.T) {
 	// Test default (text)
-	os.Unsetenv("ERST_LOG_FORMAT")
+	_ = os.Unsetenv("ERST_LOG_FORMAT")
 	if format := GetRustLogFormat(); format != "text" {
 		t.Errorf("GetRustLogFormat() = %q, want %q", format, "text")
 	}
 
 	// Test JSON
-	os.Setenv("ERST_LOG_FORMAT", "json")
+	_ = os.Setenv("ERST_LOG_FORMAT", "json")
 	if format := GetRustLogFormat(); format != "json" {
 		t.Errorf("GetRustLogFormat() with ERST_LOG_FORMAT=json = %q, want %q", format, "json")
 	}
-	os.Unsetenv("ERST_LOG_FORMAT")
+	_ = os.Unsetenv("ERST_LOG_FORMAT")
 }
 
 func TestLogLevelHierarchy(t *testing.T) {

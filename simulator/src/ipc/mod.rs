@@ -57,12 +57,22 @@ impl StreamFrame {
 
 #[allow(dead_code)]
 pub fn emit_snapshot_frame(seq: u32, data: serde_json::Value) {
-    StreamFrame { frame_type: FrameType::Snapshot, seq, data }.emit();
+    StreamFrame {
+        frame_type: FrameType::Snapshot,
+        seq,
+        data,
+    }
+    .emit();
 }
 
 #[allow(dead_code)]
 pub fn emit_final_frame(seq: u32, data: serde_json::Value) {
-    StreamFrame { frame_type: FrameType::Final, seq, data }.emit();
+    StreamFrame {
+        frame_type: FrameType::Final,
+        seq,
+        data,
+    }
+    .emit();
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -82,7 +92,9 @@ pub struct CommandFrame {
 }
 
 #[allow(dead_code)]
-fn default_batch_size() -> u32 { 1 }
+fn default_batch_size() -> u32 {
+    1
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SnapshotEntry {
@@ -111,7 +123,9 @@ pub struct SnapshotRegistry {
 
 impl SnapshotRegistry {
     #[allow(dead_code)]
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     #[allow(dead_code)]
     pub fn insert(&mut self, seq: u32, data: serde_json::Value) {
@@ -123,7 +137,10 @@ impl SnapshotRegistry {
         let count = batch_size.clamp(1, 5);
         (id..id.saturating_add(count))
             .filter_map(|seq| {
-                self.entries.get(&seq).map(|data| SnapshotEntry { seq, data: data.clone() })
+                self.entries.get(&seq).map(|data| SnapshotEntry {
+                    seq,
+                    data: data.clone(),
+                })
             })
             .collect()
     }
@@ -134,10 +151,15 @@ pub fn handle_stdin_command(registry: &SnapshotRegistry) {
     use std::io::BufRead;
     let stdin = std::io::stdin();
     let mut line = String::new();
-    if stdin.lock().read_line(&mut line).unwrap_or(0) == 0 { return; }
+    if stdin.lock().read_line(&mut line).unwrap_or(0) == 0 {
+        return;
+    }
     let cmd: CommandFrame = match serde_json::from_str(line.trim()) {
         Ok(c) => c,
-        Err(e) => { eprintln!("ipc: failed to parse command: {e}"); return; }
+        Err(e) => {
+            eprintln!("ipc: failed to parse command: {e}");
+            return;
+        }
     };
     match cmd.op {
         CommandOpcode::FetchSnapshot => {
@@ -165,14 +187,27 @@ mod tests {
 
     #[test]
     fn test_frame_type_serialization() {
-        assert_eq!(serde_json::to_string(&FrameType::Snapshot).unwrap(), "\"snapshot\"");
-        assert_eq!(serde_json::to_string(&FrameType::Final).unwrap(), "\"final\"");
-        assert_eq!(serde_json::to_string(&FrameType::FetchResponse).unwrap(), "\"fetchresponse\"");
+        assert_eq!(
+            serde_json::to_string(&FrameType::Snapshot).unwrap(),
+            "\"snapshot\""
+        );
+        assert_eq!(
+            serde_json::to_string(&FrameType::Final).unwrap(),
+            "\"final\""
+        );
+        assert_eq!(
+            serde_json::to_string(&FrameType::FetchResponse).unwrap(),
+            "\"fetchresponse\""
+        );
     }
 
     #[test]
     fn test_stream_frame_roundtrip() {
-        let frame = StreamFrame { frame_type: FrameType::Snapshot, seq: 3, data: serde_json::json!({"entries": 42}) };
+        let frame = StreamFrame {
+            frame_type: FrameType::Snapshot,
+            seq: 3,
+            data: serde_json::json!({"entries": 42}),
+        };
         let json = serde_json::to_string(&frame).unwrap();
         let decoded: StreamFrame = serde_json::from_str(&json).unwrap();
         assert_eq!(decoded.frame_type, FrameType::Snapshot);
@@ -197,7 +232,9 @@ mod tests {
     #[test]
     fn test_registry_batch_capped_at_5() {
         let mut reg = SnapshotRegistry::new();
-        for i in 0..20u32 { reg.insert(i, serde_json::json!({"ledger": i})); }
+        for i in 0..20u32 {
+            reg.insert(i, serde_json::json!({"ledger": i}));
+        }
         assert_eq!(reg.fetch(0, 10).len(), 5);
     }
 
@@ -212,7 +249,8 @@ mod tests {
 
     #[test]
     fn test_command_frame_deserialization() {
-        let cmd: CommandFrame = serde_json::from_str(r#"{"op":"FETCH_SNAPSHOT","id":3,"batch_size":5}"#).unwrap();
+        let cmd: CommandFrame =
+            serde_json::from_str(r#"{"op":"FETCH_SNAPSHOT","id":3,"batch_size":5}"#).unwrap();
         assert_eq!(cmd.op, CommandOpcode::FetchSnapshot);
         assert_eq!(cmd.id, 3);
         assert_eq!(cmd.batch_size, 5);

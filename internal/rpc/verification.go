@@ -11,7 +11,7 @@ import (
 
 	"github.com/dotandev/hintents/internal/errors"
 	"github.com/dotandev/hintents/internal/logger"
-	"github.com/stellar/go/xdr"
+	"github.com/stellar/go-stellar-sdk/xdr"
 )
 
 // validateLedgerKeyXDR decodes a base64-encoded XDR LedgerKey, validates its structure,

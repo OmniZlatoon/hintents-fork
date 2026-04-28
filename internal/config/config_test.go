@@ -242,12 +242,12 @@ network = "testnet"`,
 
 func TestLoadFromEnvironment(t *testing.T) {
 	// Save original env vars
-	origRpc := os.Getenv("ERST_RPC_URL")
+	origRPC := os.Getenv("ERST_RPC_URL")
 	origNet := os.Getenv("ERST_NETWORK")
 	origLog := os.Getenv("ERST_LOG_LEVEL")
 
 	defer func() {
-		os.Setenv("ERST_RPC_URL", origRpc)
+		os.Setenv("ERST_RPC_URL", origRPC)
 		os.Setenv("ERST_NETWORK", origNet)
 		os.Setenv("ERST_LOG_LEVEL", origLog)
 	}()

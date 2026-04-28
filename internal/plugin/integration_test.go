@@ -72,7 +72,7 @@ func TestManagerWithInvalidDir(t *testing.T) {
 	}
 }
 
-func TestPluginMetadata(t *testing.T) {
+func TestMetadata(t *testing.T) {
 	mock := &mockDecoder{
 		name:    "meta-test",
 		version: "1.5.0",

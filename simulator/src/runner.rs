@@ -130,7 +130,10 @@ impl SimHost {
         self.restore_from_snapshot(&snapshot)
     }
 
-    fn storage_from_snapshot(snapshot: &LedgerSnapshot, budget: &Budget) -> Result<Storage, SimHostError> {
+    fn storage_from_snapshot(
+        snapshot: &LedgerSnapshot,
+        budget: &Budget,
+    ) -> Result<Storage, SimHostError> {
         let mut footprint_map = FootprintMap::new();
         let mut storage_map = StorageMap::new();
 
@@ -190,11 +193,11 @@ impl SimHost {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_env_host::EnvBase;
     use soroban_env_host::xdr::{
         ContractDataDurability, ContractDataEntry, ContractId, Hash, LedgerEntry, LedgerEntryData,
         LedgerEntryExt, LedgerKey, LedgerKeyContractData, ScAddress, ScVal,
     };
+    use soroban_env_host::EnvBase;
 
     #[test]
     fn test_host_initialization() {
@@ -279,10 +282,16 @@ mod tests {
         host.restore_from_snapshot(&snapshot)
             .expect("restoring snapshot should succeed");
 
-        let restored = host.capture_snapshot().expect("restored snapshot should capture");
+        let restored = host
+            .capture_snapshot()
+            .expect("restored snapshot should capture");
         assert_eq!(restored.len(), 1);
-        assert!(restored.get(&first_key.to_xdr(Limits::none()).unwrap()).is_some());
-        assert!(restored.get(&second_key.to_xdr(Limits::none()).unwrap()).is_none());
+        assert!(restored
+            .get(&first_key.to_xdr(Limits::none()).unwrap())
+            .is_some());
+        assert!(restored
+            .get(&second_key.to_xdr(Limits::none()).unwrap())
+            .is_none());
         assert!(
             host.events().expect("events should read").0.is_empty(),
             "fresh host should not retain post-rollback host events"

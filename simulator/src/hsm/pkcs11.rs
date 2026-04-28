@@ -726,30 +726,36 @@ struct Pkcs11Functions {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    // Use a static mutex to serialize tests that touch the environment
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn test_pkcs11_config_from_env() {
-        // This test will fail unless environment variables are set
-        // but it demonstrates the expected behavior
+        let _lock = ENV_LOCK.lock().unwrap();
 
         // Temporarily set environment variables
         std::env::set_var("ERST_PKCS11_MODULE", "/usr/lib/libykcs11.so");
         std::env::set_var("ERST_PKCS11_PIN", "123456");
 
         let config = Pkcs11SignerConfig::from_env();
+
+        // Clean up immediately after reading from env to minimize window
+        std::env::remove_var("ERST_PKCS11_MODULE");
+        std::env::remove_var("ERST_PKCS11_PIN");
+
         assert!(config.is_ok());
 
         let config = config.unwrap();
         assert_eq!(config.module_path, "/usr/lib/libykcs11.so");
         assert_eq!(config.pin, "123456");
-
-        // Clean up
-        std::env::remove_var("ERST_PKCS11_MODULE");
-        std::env::remove_var("ERST_PKCS11_PIN");
     }
 
     #[test]
     fn test_pkcs11_config_missing_required() {
+        let _lock = ENV_LOCK.lock().unwrap();
+
         // Should fail when required environment variables are missing
         std::env::remove_var("ERST_PKCS11_MODULE");
         std::env::remove_var("ERST_PKCS11_PIN");

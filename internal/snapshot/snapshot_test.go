@@ -60,7 +60,7 @@ func TestSaveNormalizesEntryOrder(t *testing.T) {
 	if posA == -1 || posM == -1 || posZ == -1 {
 		t.Fatalf("saved JSON does not contain expected keys: %s", text)
 	}
-	if !(posA < posM && posM < posZ) {
+	if posA >= posM || posM >= posZ {
 		t.Fatalf("expected keys to be sorted in saved JSON, got: %s", text)
 	}
 }

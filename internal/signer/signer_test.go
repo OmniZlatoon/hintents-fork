@@ -85,16 +85,16 @@ func TestInMemorySignerWrongKeyLength(t *testing.T) {
 	}
 }
 
-func TestSignerErrorFormat(t *testing.T) {
-	e := &SignerError{Op: "test", Msg: "something failed"}
+func TestErrorFormat(t *testing.T) {
+	e := &Error{Op: "test", Msg: "something failed"}
 	if e.Error() != "test: something failed" {
 		t.Fatalf("unexpected error string: %s", e.Error())
 	}
 }
 
-func TestSignerErrorUnwrap(t *testing.T) {
-	inner := &SignerError{Op: "inner", Msg: "root cause"}
-	outer := &SignerError{Op: "outer", Msg: "wrapping", Err: inner}
+func TestErrorUnwrap(t *testing.T) {
+	inner := &Error{Op: "inner", Msg: "root cause"}
+	outer := &Error{Op: "outer", Msg: "wrapping", Err: inner}
 	if outer.Unwrap() != inner {
 		t.Fatal("Unwrap did not return inner error")
 	}

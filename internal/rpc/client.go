@@ -13,72 +13,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dotandev/hintents/internal/errors"
 	"github.com/dotandev/hintents/internal/logger"
 	"github.com/dotandev/hintents/internal/metrics"
 
 	"github.com/dotandev/hintents/internal/telemetry"
-	"github.com/stellar/go/clients/horizonclient"
-	hProtocol "github.com/stellar/go/protocols/horizon"
-	"github.com/stellar/go/protocols/horizon/effects"
+	"github.com/stellar/go-stellar-sdk/clients/horizonclient"
 	"go.opentelemetry.io/otel/attribute"
-
-	"github.com/dotandev/hintents/internal/errors"
 )
 
-// Network types for Stellar
-type Network string
-
-const (
-	Testnet   Network = "testnet"
-	Mainnet   Network = "mainnet"
-	Futurenet Network = "futurenet"
-)
-
-// Horizon URLs for each network
-const (
-	TestnetHorizonURL   = "https://horizon-testnet.stellar.org/"
-	MainnetHorizonURL   = "https://horizon.stellar.org/"
-	FuturenetHorizonURL = "https://horizon-futurenet.stellar.org/"
-)
-
-// Soroban RPC URLs
-const (
-	TestnetSorobanURL   = "https://soroban-testnet.stellar.org"
-	MainnetSorobanURL   = "https://mainnet.stellar.validationcloud.io/v1/soroban-rpc-demo" // Public demo endpoint
-	FuturenetSorobanURL = "https://rpc-futurenet.stellar.org"
-)
-
-// NetworkConfig represents a Stellar network configuration
-type NetworkConfig struct {
-	Name              string
-	HorizonURL        string
-	NetworkPassphrase string
-	SorobanRPCURL     string
-}
-
-// Predefined network configurations
-var (
-	TestnetConfig = NetworkConfig{
-		Name:              "testnet",
-		HorizonURL:        TestnetHorizonURL,
-		NetworkPassphrase: "Test SDF Network ; September 2015",
-		SorobanRPCURL:     TestnetSorobanURL,
-	}
-
-	MainnetConfig = NetworkConfig{
-		Name:              "mainnet",
-		HorizonURL:        MainnetHorizonURL,
-		NetworkPassphrase: "Public Global Stellar Network ; September 2015",
-		SorobanRPCURL:     MainnetSorobanURL,
-	}
-
-	FuturenetConfig = NetworkConfig{
-		Name:              "futurenet",
-		HorizonURL:        FuturenetHorizonURL,
-		NetworkPassphrase: "Test SDF Future Network ; October 2022",
-		SorobanRPCURL:     FuturenetSorobanURL,
-	}
-)
+var Version = "dev"
 
 // HTTPClient is an interface that matches horizonclient.HTTP.
 type HTTPClient interface {
@@ -90,21 +34,23 @@ type HTTPClient interface {
 
 // Client handles interactions with the Stellar Network
 type Client struct {
-	Horizon         horizonclient.ClientInterface
-	HorizonURL      string
-	Network         Network
-	SorobanURL      string
-	AltURLs         []string
-	currIndex       int
-	mu              sync.RWMutex
-	httpClient      HTTPClient
-	token           string // stored for reference, not logged
-	Config          NetworkConfig
-	CacheEnabled    bool
-	methodTelemetry MethodTelemetry
-	failures        map[string]int
-	lastFailure     map[string]time.Time
-	middlewares     []Middleware
+	Horizon          horizonclient.ClientInterface
+	HorizonURL       string
+	Network          Network
+	SorobanURL       string
+	AltURLs          []string
+	currIndex        int
+	mu               sync.RWMutex
+	httpClient       HTTPClient
+	token            string // stored for reference, not logged
+	Config           NetworkConfig
+	CacheEnabled     bool
+	methodTelemetry  MethodTelemetry
+	failures         map[string]int
+	lastFailure      map[string]time.Time
+	FailureThreshold int
+	RetryTimeout     int
+	middlewares      []Middleware
 	// rotateCount tracks how many times rotateURL has successfully switched
 	// the active provider.  This is useful for metrics/observability when the
 	// client is operating in a multi‑URL failover configuration.
@@ -112,82 +58,11 @@ type Client struct {
 	healthCollector *HealthCollector
 }
 
-// NewClientDefault creates a new RPC client with sensible defaults
-// Uses the Mainnet by default and accepts optional environment token
-// Deprecated: Use NewClient with functional options instead
-func NewClientDefault(net Network, token string) *Client {
-	client, err := NewClient(WithNetwork(net), WithToken(token))
-	if err != nil {
-		logger.Logger.Error("Failed to create client with default options", "error", err)
-		return nil
-	}
-	return client
-}
-
-// NewClientWithURLOption creates a new RPC client with a custom Horizon URL
-// Deprecated: Use NewClient with WithHorizonURL instead
-func NewClientWithURLOption(url string, net Network, token string) *Client {
-	client, err := NewClient(WithNetwork(net), WithToken(token), WithHorizonURL(url))
-	if err != nil {
-		logger.Logger.Error("Failed to create client with URL", "error", err)
-		return nil
-	}
-	return client
-}
-
-// NewClientWithURLsOption creates a new RPC client with multiple Horizon URLs for failover
-// Deprecated: Use NewClient with WithAltURLs instead
-func NewClientWithURLsOption(urls []string, net Network, token string) *Client {
-	client, err := NewClient(WithNetwork(net), WithToken(token), WithAltURLs(urls))
-	if err != nil {
-		logger.Logger.Error("Failed to create client with URLs", "error", err)
-		return nil
-	}
-	return client
-}
-
-// attempts returns the number of retry attempts for failover loops (at least 1)
-func (c *Client) attempts() int { //nolint:unused
-	if len(c.AltURLs) == 0 {
-		return 1
-	}
-	return len(c.AltURLs)
-}
-
 func (c *Client) startMethodTimer(ctx context.Context, method string, attributes map[string]string) MethodTimer {
 	if c == nil || c.methodTelemetry == nil {
 		return noopMethodTimer{}
 	}
 	return c.methodTelemetry.StartMethodTimer(ctx, method, attributes)
-}
-
-// NewCustomClient creates a new RPC client for a custom/private network
-// Deprecated: Use NewClient with WithNetworkConfig instead
-func NewCustomClient(config NetworkConfig) (*Client, error) {
-	if err := ValidateNetworkConfig(config); err != nil {
-		return nil, err
-	}
-
-	httpClient := createHTTPClient("", defaultHTTPTimeout, nil)
-	horizonClient := &horizonclient.Client{
-		HorizonURL: config.HorizonURL,
-		HTTP:       httpClient,
-	}
-
-	sorobanURL := config.SorobanRPCURL
-	if sorobanURL == "" {
-		sorobanURL = config.HorizonURL
-	}
-
-	return &Client{
-		Horizon:         horizonClient,
-		Network:         "custom",
-		SorobanURL:      sorobanURL,
-		Config:          config,
-		CacheEnabled:    true,
-		httpClient:      httpClient,
-		healthCollector: NewHealthCollector(),
-	}, nil
 }
 
 // GetTransaction fetches the transaction details and full XDR data
@@ -464,148 +339,4 @@ func IsRateLimitError(err error) bool {
 // IsResponseTooLarge checks if error indicates the RPC response exceeded size limits
 func IsResponseTooLarge(err error) bool {
 	return errors.Is(err, errors.ErrRPCResponseTooLarge)
-}
-
-type TransactionSummary struct {
-	Hash      string
-	Status    string
-	CreatedAt string
-}
-
-type AccountSummary struct {
-	ID            string
-	Sequence      int64
-	SubentryCount int32
-}
-
-type EventSummary struct {
-	ID   string
-	Type string
-}
-
-func (c *Client) GetAccountTransactions(ctx context.Context, account string, limit int) ([]TransactionSummary, error) {
-	logger.Logger.Debug("Fetching account transactions", "account", account)
-
-	pageSize := normalizePageSize(limit)
-	req := horizonclient.TransactionRequest{
-		ForAccount: account,
-		Limit:      uint(pageSize),
-		Order:      horizonclient.OrderDesc,
-	}
-
-	transactions, err := pageIterator[hProtocol.TransactionsPage, hProtocol.Transaction]{
-		first: func() (hProtocol.TransactionsPage, error) {
-			return c.Horizon.Transactions(req)
-		},
-		next: func(page hProtocol.TransactionsPage) (hProtocol.TransactionsPage, error) {
-			return c.Horizon.NextTransactionsPage(page)
-		},
-		records: func(page hProtocol.TransactionsPage) []hProtocol.Transaction {
-			return page.Embedded.Records
-		},
-		max: limit,
-	}.collect()
-	if err != nil {
-		logger.Logger.Error("Failed to fetch account transactions", "account", account, "error", err)
-		return nil, errors.WrapRPCConnectionFailed(err)
-	}
-
-	summaries := make([]TransactionSummary, 0, len(transactions))
-	for _, tx := range transactions {
-		summaries = append(summaries, TransactionSummary{
-			Hash:      tx.Hash,
-			Status:    getTransactionStatus(tx),
-			CreatedAt: tx.LedgerCloseTime.Format("2006-01-02 15:04:05"),
-		})
-	}
-
-	logger.Logger.Debug("Account transactions retrieved", "count", len(summaries))
-	return summaries, nil
-}
-
-// GetEventsForAccount fetches effects (treated as events) for an account using shared page iteration.
-func (c *Client) GetEventsForAccount(ctx context.Context, account string, limit int) ([]EventSummary, error) {
-	logger.Logger.Debug("Fetching account events", "account", account)
-
-	pageSize := normalizePageSize(limit)
-	req := horizonclient.EffectRequest{
-		ForAccount: account,
-		Limit:      uint(pageSize),
-		Order:      horizonclient.OrderDesc,
-	}
-
-	eventRecords, err := pageIterator[effects.EffectsPage, effects.Effect]{
-		first: func() (effects.EffectsPage, error) {
-			return c.Horizon.Effects(req)
-		},
-		next: func(page effects.EffectsPage) (effects.EffectsPage, error) {
-			return c.Horizon.NextEffectsPage(page)
-		},
-		records: func(page effects.EffectsPage) []effects.Effect {
-			return page.Embedded.Records
-		},
-		max: limit,
-	}.collect()
-	if err != nil {
-		logger.Logger.Error("Failed to fetch account events", "account", account, "error", err)
-		return nil, errors.WrapRPCConnectionFailed(err)
-	}
-
-	out := make([]EventSummary, 0, len(eventRecords))
-	for _, evt := range eventRecords {
-		out = append(out, EventSummary{
-			ID:   evt.GetID(),
-			Type: evt.GetType(),
-		})
-	}
-
-	logger.Logger.Debug("Account events retrieved", "count", len(out))
-	return out, nil
-}
-
-// GetAccounts fetches account records using shared page iteration.
-func (c *Client) GetAccounts(ctx context.Context, limit int) ([]AccountSummary, error) {
-	logger.Logger.Debug("Fetching accounts")
-
-	pageSize := normalizePageSize(limit)
-	req := horizonclient.AccountsRequest{
-		Limit: uint(pageSize),
-		Order: horizonclient.OrderDesc,
-	}
-
-	accountRecords, err := pageIterator[hProtocol.AccountsPage, hProtocol.Account]{
-		first: func() (hProtocol.AccountsPage, error) {
-			return c.Horizon.Accounts(req)
-		},
-		next: func(page hProtocol.AccountsPage) (hProtocol.AccountsPage, error) {
-			return c.Horizon.NextAccountsPage(page)
-		},
-		records: func(page hProtocol.AccountsPage) []hProtocol.Account {
-			return page.Embedded.Records
-		},
-		max: limit,
-	}.collect()
-	if err != nil {
-		logger.Logger.Error("Failed to fetch accounts", "error", err)
-		return nil, errors.WrapRPCConnectionFailed(err)
-	}
-
-	out := make([]AccountSummary, 0, len(accountRecords))
-	for _, acc := range accountRecords {
-		out = append(out, AccountSummary{
-			ID:            acc.AccountID,
-			Sequence:      acc.Sequence,
-			SubentryCount: acc.SubentryCount,
-		})
-	}
-
-	logger.Logger.Debug("Accounts retrieved", "count", len(out))
-	return out, nil
-}
-
-func getTransactionStatus(tx hProtocol.Transaction) string {
-	if tx.Successful {
-		return "success"
-	}
-	return "failed"
 }

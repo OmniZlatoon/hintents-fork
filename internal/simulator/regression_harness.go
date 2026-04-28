@@ -196,17 +196,18 @@ func (h *RegressionHarness) testTransaction(
 	result.ExpectedCount = result.EventCount // For now, assume match if simulation succeeded
 
 	// Verify results
-	if simResp.Status == "success" {
+	switch simResp.Status {
+	case "success":
 		result.Status = "pass"
 		result.TrapsMatch = true
 		result.EventCountMatch = true
-	} else if simResp.Status == "error" {
+	case "error":
 		// Transaction failed in simulation, which is expected for failed txs
 		result.Status = "pass"
 		result.TrapsMatch = true
 		result.EventCountMatch = true
 		result.ErrorMessage = simResp.Error
-	} else {
+	default:
 		result.Status = "fail"
 		result.TrapsMatch = false
 		result.ErrorMessage = "unexpected simulation status: " + simResp.Status

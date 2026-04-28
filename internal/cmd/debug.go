@@ -37,7 +37,7 @@ import (
 	"github.com/dotandev/hintents/internal/watch"
 
 	"github.com/spf13/cobra"
-	"github.com/stellar/go/xdr"
+	"github.com/stellar/go-stellar-sdk/xdr"
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -120,8 +120,8 @@ Example:
 	return cmd
 }
 
-func (d *DebugCommand) runDebug(cmd *cobra.Command, args []string) error {
-	txHash := args[0]
+func (d *DebugCommand) runDebug(cmd *cobra.Command, cmdArgs []string) error {
+	txHash := cmdArgs[0]
 
 	token := rpcTokenFlag
 	if token == "" {
@@ -161,12 +161,14 @@ func (d *DebugCommand) runDebug(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("Transaction fetched successfully. Envelope size: %d bytes\n", len(resp.EnvelopeXdr))
 
-	// TODO: Use d.Runner for simulation when ready
-	// simReq := &simulator.SimulationRequest{
-	//     EnvelopeXdr: resp.EnvelopeXdr,
-	//     ResultMetaXdr: resp.ResultMetaXdr,
-	// }
-	// simResp, err := d.Runner.Run(simReq)
+	simReq := &simulator.SimulationRequest{
+		EnvelopeXdr:   resp.EnvelopeXdr,
+		ResultMetaXdr: resp.ResultMetaXdr,
+	}
+	_, err = d.Runner.Run(cmd.Context(), simReq)
+	if err != nil {
+		return errors.WrapSimulationFailed(err, txHash)
+	}
 
 	return nil
 }
@@ -356,6 +358,12 @@ Local WASM Replay Mode:
 				} else if cfg.RpcUrl != "" {
 					opts = append(opts, rpc.WithHorizonURL(cfg.RpcUrl))
 					horizonURL = cfg.RpcUrl
+				}
+				if cfg.FailureThreshold > 0 {
+					opts = append(opts, rpc.WithCircuitBreakerThreshold(cfg.FailureThreshold))
+				}
+				if cfg.RetryTimeout > 0 {
+					opts = append(opts, rpc.WithCircuitBreakerTimeout(cfg.RetryTimeout))
 				}
 			}
 		}
@@ -636,7 +644,7 @@ Local WASM Replay Mode:
 				if err != nil {
 					fmt.Printf("%s Error building call tree for SVG: %v\n", visualizer.Symbol("error"), err)
 				} else {
-					svg := visualizer.GenerateCallGraphSVG(callTree)
+					svg := visualizer.GenerateCallGraphSVG(callTree, maxDepth)
 					err := os.WriteFile(exportSVGFlag, []byte(svg), 0644)
 					if err != nil {
 						fmt.Printf("%s Error saving SVG: %v\n", visualizer.Symbol("error"), err)
@@ -751,7 +759,7 @@ Local WASM Replay Mode:
 			fmt.Printf("Warning: failed to serialize simulation results: %v\n", err)
 		}
 
-		sessionData := &session.SessionData{
+		sessionData := &session.Data{
 			ID:              session.GenerateID(txHash),
 			CreatedAt:       time.Now(),
 			LastAccessAt:    time.Now(),
