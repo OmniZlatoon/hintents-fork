@@ -54,6 +54,8 @@ var (
 	verbose             bool
 	wasmPath            string
 	args                []string
+	mockLedgerEntryFlags []string
+	mockLedgerManifest   string
 	themeFlag           string
 	noCacheFlag         bool
 	demoMode            bool
@@ -463,6 +465,11 @@ Local WASM Replay Mode:
 			}
 		}
 
+		overrideEntries, err := loadMockLedgerOverrides()
+		if err != nil {
+			return err
+		}
+
 		var lastSimResp *simulator.SimulationResponse
 
 		// Collected per-timestamp states written to disk when --save-snapshots is set.
@@ -501,6 +508,11 @@ Local WASM Replay Mode:
 					} else {
 						logger.Logger.Info("Extracted ledger entries for simulation", "count", len(ledgerEntries))
 					}
+				}
+
+				if len(overrideEntries) > 0 {
+					ledgerEntries = simulator.MergeLedgerOverrides(ledgerEntries, overrideEntries)
+					fmt.Printf("Applied %d mock ledger override entries\n", len(overrideEntries))
 				}
 
 				if saveSnapshotsFlag != "" {
@@ -565,6 +577,10 @@ Local WASM Replay Mode:
 							return
 						}
 					}
+					if len(overrideEntries) > 0 {
+						entries = simulator.MergeLedgerOverrides(entries, overrideEntries)
+						fmt.Printf("Applied %d mock ledger override entries to primary comparison\n", len(overrideEntries))
+					}
 					primaryReq := &simulator.SimulationRequest{
 						EnvelopeXdr:     resp.EnvelopeXdr,
 						ResultMetaXdr:   resp.ResultMetaXdr,
@@ -606,8 +622,13 @@ Local WASM Replay Mode:
 						}
 					}
 
+					if len(overrideEntries) > 0 {
+						entries = simulator.MergeLedgerOverrides(entries, overrideEntries)
+						fmt.Printf("Applied %d mock ledger override entries to compare comparison\n", len(overrideEntries))
+					}
+
 					compareReq := &simulator.SimulationRequest{
-						EnvelopeXdr:     resp.EnvelopeXdr,
+						EnvelopeXdr:     compareResp.EnvelopeXdr,
 						ResultMetaXdr:   compareResp.ResultMetaXdr,
 						LedgerEntries:   entries,
 						Timestamp:       ts,
@@ -918,8 +939,38 @@ func newLocalWasmSimulationRequest(forceNoCache bool) *simulator.SimulationReque
 	return req
 }
 
+func loadMockLedgerOverrides() (map[string]string, error) {
+	var overrides map[string]string
+	if mockLedgerManifest != "" {
+		manifestOverrides, err := simulator.LoadLedgerOverrideManifest(mockLedgerManifest)
+		if err != nil {
+			return nil, errors.WrapValidationError(fmt.Sprintf("failed to load mock ledger manifest: %v", err))
+		}
+		overrides = simulator.MergeLedgerOverrides(overrides, manifestOverrides)
+	}
+
+	if len(mockLedgerEntryFlags) > 0 {
+		flagOverrides, err := simulator.ParseLedgerOverrideFlags(mockLedgerEntryFlags)
+		if err != nil {
+			return nil, errors.WrapValidationError(fmt.Sprintf("failed to parse mock ledger entries: %v", err))
+		}
+		overrides = simulator.MergeLedgerOverrides(overrides, flagOverrides)
+	}
+
+	return overrides, nil
+}
+
 func runLocalWasmReplayOnce(ctx context.Context, runner simulator.RunnerInterface, forceNoCache bool) error {
 	req := newLocalWasmSimulationRequest(forceNoCache)
+
+	overrideEntries, err := loadMockLedgerOverrides()
+	if err != nil {
+		return err
+	}
+	if len(overrideEntries) > 0 {
+		req.LedgerEntries = simulator.MergeLedgerOverrides(req.LedgerEntries, overrideEntries)
+		fmt.Printf("Applied %d mock ledger override entries for local replay\n", len(overrideEntries))
+	}
 
 	// Run simulation
 	fmt.Printf("%s Executing contract locally...\n", visualizer.Symbol("play"))
@@ -1502,6 +1553,8 @@ func init() {
 	debugCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 	debugCmd.Flags().StringVar(&wasmPath, "wasm", "", "Path to local WASM file for local replay (no network required)")
 	debugCmd.Flags().StringSliceVar(&args, "args", []string{}, "Mock arguments for local replay (JSON array of strings)")
+	debugCmd.Flags().StringSliceVar(&mockLedgerEntryFlags, "mock-ledger-entry", []string{}, "Override ledger entries before simulation using key:value; repeatable")
+	debugCmd.Flags().StringVar(&mockLedgerManifest, "mock-ledger-manifest", "", "Path to a JSON manifest containing ledger_entries for override state")
 	debugCmd.Flags().BoolVar(&noCacheFlag, "no-cache", false, "Disable local ledger state caching")
 	debugCmd.Flags().BoolVar(&demoMode, "demo", false, "Print sample output (no network) - for testing color detection")
 	debugCmd.Flags().BoolVar(&watchFlag, "watch", false, "Poll for transaction on-chain before debugging")
