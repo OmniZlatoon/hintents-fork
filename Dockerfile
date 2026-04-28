@@ -1,5 +1,5 @@
 # Stage 1: Build Rust simulator
-FROM rust:alpine AS builder-rust
+FROM --platform=$BUILDPLATFORM rust:alpine AS builder-rust
 
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
@@ -32,7 +32,7 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
   fi
 
 # Stage 2: Build Go CLI
-FROM golang:1.24-alpine AS builder-go
+FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS builder-go
 
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
