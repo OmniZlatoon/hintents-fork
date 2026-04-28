@@ -134,7 +134,7 @@ func (m *MultiSigContractAuth) ValidateAuth(contractID string, method string, pa
 	}
 
 	if len(signatures) < m.RequiredSignatures {
-		return false, nil
+		return false, fmt.Errorf("THRESHOLD_NOT_MET: insufficient signatures: got %d, required %d", len(signatures), m.RequiredSignatures)
 	}
 
 	totalWeight := uint32(0)
