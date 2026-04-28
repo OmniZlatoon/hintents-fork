@@ -32,6 +32,7 @@ import (
 	"github.com/dotandev/hintents/internal/telemetry"
 	"github.com/dotandev/hintents/internal/tokenflow"
 	simtypes "github.com/dotandev/hintents/internal/types"
+	"github.com/dotandev/hintents/internal/version"
 	"github.com/dotandev/hintents/internal/visualizer"
 	"github.com/dotandev/hintents/internal/wat"
 	"github.com/dotandev/hintents/internal/watch"
@@ -673,7 +674,7 @@ Local WASM Replay Mode:
 
 		// Persist snapshot registry to disk when --save-snapshots is set.
 		if saveSnapshotsFlag != "" && len(collectedEntries) > 0 {
-			reg := debug.New(Version, txHash, networkFlag, resp.EnvelopeXdr, resp.ResultMetaXdr)
+			reg := debug.New(version.Version, txHash, networkFlag, resp.EnvelopeXdr, resp.ResultMetaXdr)
 			for _, ce := range collectedEntries {
 				reg.Add(ce.ts, snapshot.FromMap(ce.entries))
 			}
@@ -784,7 +785,7 @@ Local WASM Replay Mode:
 			ResultMetaXdr:   resp.ResultMetaXdr,
 			SimRequestJSON:  string(simReqJSON),
 			SimResponseJSON: string(simRespJSON),
-			ErstVersion:     Version,
+			ErstVersion:     version.Version,
 			SchemaVersion:   session.SchemaVersion,
 		}
 		SetCurrentSession(sessionData)
