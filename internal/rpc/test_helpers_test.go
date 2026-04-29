@@ -19,7 +19,7 @@ func buildValidEntryB64(keyB64 string) string {
 		panic(fmt.Sprintf("buildValidEntryB64: bad base64: %v", err))
 	}
 	var lk xdr.LedgerKey
-	if err := xdr.SafeUnmarshal(keyBytes, &lk); err != nil {
+	if err := lk.UnmarshalBinary(keyBytes); err != nil {
 		panic(fmt.Sprintf("buildValidEntryB64: bad XDR key: %v", err))
 	}
 

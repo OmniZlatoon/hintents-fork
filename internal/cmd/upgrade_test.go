@@ -90,7 +90,7 @@ func TestInjectNewCode(t *testing.T) {
 	// 4. Verify Value
 	valBytes, _ := base64.StdEncoding.DecodeString(valB64)
 	var entry xdr.LedgerEntry
-	err = xdr.SafeUnmarshal(valBytes, &entry)
+	err = entry.UnmarshalBinary(valBytes)
 	require.NoError(t, err)
 
 	assert.Equal(t, xdr.LedgerEntryTypeContractCode, entry.Data.Type)

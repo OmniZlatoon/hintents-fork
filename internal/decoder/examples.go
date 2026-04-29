@@ -22,7 +22,7 @@ func DecodeResultXDR(resultXDR string) (string, error) {
 
 	// Parse XDR
 	var result xdr.TransactionResult
-	if err := xdr.SafeUnmarshal(data, &result); err != nil {
+	if err := result.UnmarshalBinary(data); err != nil {
 		return "", fmt.Errorf("failed to unmarshal XDR: %w", err)
 	}
 

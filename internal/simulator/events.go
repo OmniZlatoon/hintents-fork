@@ -31,7 +31,7 @@ func (e *DiagnosticEvent) ParseData() (xdr.ScVal, error) {
 	if err != nil {
 		return val, fmt.Errorf("decode data base64: %w", err)
 	}
-	if err := xdr.SafeUnmarshal(raw, &val); err != nil {
+	if err := val.UnmarshalBinary(raw); err != nil {
 		return val, fmt.Errorf("unmarshal data xdr: %w", err)
 	}
 	return val, nil
@@ -46,7 +46,7 @@ func (e *DiagnosticEvent) ParseTopics() ([]xdr.ScVal, error) {
 		if err != nil {
 			return nil, fmt.Errorf("decode topic[%d] base64: %w", i, err)
 		}
-		if err := xdr.SafeUnmarshal(raw, &val); err != nil {
+		if err := val.UnmarshalBinary(raw); err != nil {
 			return nil, fmt.Errorf("unmarshal topic[%d] xdr: %w", i, err)
 		}
 		vals = append(vals, val)

@@ -140,7 +140,11 @@ func init() {
 
 func getContractIDFromEnvelope(envelopeXdr string) (*xdr.Hash, error) {
 	var env xdr.TransactionEnvelope
-	if err := xdr.SafeUnmarshalBase64(envelopeXdr, &env); err != nil {
+	data, err := base64.StdEncoding.DecodeString(envelopeXdr)
+	if err != nil {
+		return nil, err
+	}
+	if err := env.UnmarshalBinary(data); err != nil {
 		return nil, err
 	}
 

@@ -7,13 +7,14 @@ import (
 	"encoding/base64"
 	"testing"
 
+	"github.com/stellar/go-stellar-sdk/strkey"
 	"github.com/stellar/go-stellar-sdk/xdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewContractInstanceKey(t *testing.T) {
-	contractID := "CCW67ZTM6S7C3S64Z6S3SLZ6S7C3S64Z6S3SLZ6S7C3S64Z6S3SLZ6S"
+	contractID, _ := strkey.Encode(strkey.VersionByteContract, make([]byte, 32))
 	key, err := NewContractInstanceKey(contractID)
 	require.NoError(t, err)
 
@@ -43,7 +44,7 @@ func TestParseWasmHashFromInstance(t *testing.T) {
 			ContractData: &xdr.ContractDataEntry{
 				Contract: xdr.ScAddress{
 					Type: xdr.ScAddressTypeScAddressTypeContract,
-					ContractId: &xdr.Hash{},
+					ContractId: (*xdr.ContractId)(&xdr.Hash{}),
 				},
 				Key: xdr.ScVal{
 					Type: xdr.ScValTypeScvLedgerKeyContractInstance,
@@ -74,7 +75,15 @@ func TestParseWasmHashFromInstance(t *testing.T) {
 	assert.False(t, ok)
 
 	// Test wrong entry type
-	entry.Data.Type = xdr.LedgerEntryTypeAccount
+	entry.Data = xdr.LedgerEntryData{
+		Type: xdr.LedgerEntryTypeAccount,
+		Account: &xdr.AccountEntry{
+			AccountId: xdr.AccountId{
+				Type:    xdr.PublicKeyTypePublicKeyTypeEd25519,
+				Ed25519: &xdr.Uint256{1},
+			},
+		},
+	}
 	xdrBytes, _ = entry.MarshalBinary()
 	_, ok = ParseWasmHashFromInstance(base64.StdEncoding.EncodeToString(xdrBytes))
 	assert.False(t, ok)

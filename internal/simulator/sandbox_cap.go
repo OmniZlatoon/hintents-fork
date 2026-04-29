@@ -22,7 +22,7 @@ func SumNativePaymentsStroops(envelopeXdr string) (uint64, error) {
 		return 0, fmt.Errorf("decode envelope base64: %w", err)
 	}
 	var env xdr.TransactionEnvelope
-	if err := xdr.SafeUnmarshal(raw, &env); err != nil {
+	if err := env.UnmarshalBinary(raw); err != nil {
 		return 0, fmt.Errorf("unmarshal envelope: %w", err)
 	}
 	var tx xdr.Transaction

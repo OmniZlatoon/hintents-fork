@@ -44,7 +44,7 @@ func DecodeEvents(eventsXdr []string, maxDepth int) (*CallNode, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to decode base64 event: %w", err)
 		}
-		if err := xdr.SafeUnmarshal(data, &diag); err != nil {
+		if err := diag.UnmarshalBinary(data); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal XDR event: %w", err)
 		}
 
@@ -208,7 +208,7 @@ func DecodeEnvelope(envelopeXdr string) (*xdr.TransactionEnvelope, error) {
 
 	// Decode XDR
 	var envelope xdr.TransactionEnvelope
-	if err := xdr.SafeUnmarshal(xdrBytes, &envelope); err != nil {
+	if err := envelope.UnmarshalBinary(xdrBytes); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal XDR: %w", err)
 	}
 

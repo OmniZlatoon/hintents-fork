@@ -24,7 +24,7 @@ func validateLedgerKeyXDR(keyB64 string) error { //nolint:unused
 	}
 
 	var ledgerKey xdr.LedgerKey
-	if err := xdr.SafeUnmarshal(keyBytes, &ledgerKey); err != nil {
+	if err := ledgerKey.UnmarshalBinary(keyBytes); err != nil {
 		return errors.WrapValidationError(fmt.Sprintf("failed to unmarshal ledger key: %v", err))
 	}
 
@@ -56,7 +56,7 @@ func VerifyLedgerEntryHash(requestedKeyB64 string, result LedgerEntryResult) err
 
 	// Unmarshal into LedgerEntry to validate structure
 	var ledgerEntry xdr.LedgerEntry
-	if err := xdr.SafeUnmarshal(entryBytes, &ledgerEntry); err != nil {
+	if err := ledgerEntry.UnmarshalBinary(entryBytes); err != nil {
 		return errors.WrapValidationError(fmt.Sprintf("failed to unmarshal ledger entry: %v", err))
 	}
 

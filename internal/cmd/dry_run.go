@@ -79,7 +79,7 @@ func runDryRun(cmd *cobra.Command, args []string) error {
 		return errors.WrapUnmarshalFailed(err, "envelope base64")
 	}
 	var envelope xdr.TransactionEnvelope
-	if err = xdr.SafeUnmarshal(envBytes, &envelope); err != nil {
+	if err = envelope.UnmarshalBinary(envBytes); err != nil {
 		return errors.WrapUnmarshalFailed(err, "TransactionEnvelope")
 	}
 

@@ -112,37 +112,37 @@ func ExtractLedgerEntriesFromMeta(resultMetaXDR string) (map[string]string, erro
 		return nil, errors.WrapUnmarshalFailed(err, "result meta binary")
 	}
 
-
+	ledgerEntries := make(map[string]string)
 	// Extract entries from TransactionMeta
 	switch resultMeta.TxApplyProcessing.V {
 	case 0:
 		if resultMeta.TxApplyProcessing.Operations != nil {
-			extractFromLedgerEntryChanges(*resultMeta.TxApplyProcessing.Operations, entries)
+			extractFromLedgerEntryChanges(*resultMeta.TxApplyProcessing.Operations, ledgerEntries)
 		}
 
 	case 1:
 		if resultMeta.TxApplyProcessing.V1 != nil {
-			extractFromLedgerEntryChanges(resultMeta.TxApplyProcessing.V1.Operations, entries)
+			extractFromLedgerEntryChanges(resultMeta.TxApplyProcessing.V1.Operations, ledgerEntries)
 		}
 
 	case 2:
 		if v2 := resultMeta.TxApplyProcessing.V2; v2 != nil {
-			extractFromLedgerEntryChanges(v2.Operations, entries)
+			extractFromLedgerEntryChanges(v2.Operations, ledgerEntries)
 			// Also extract from TxChangesBefore and TxChangesAfter
-			extractFromChanges(v2.TxChangesBefore, entries)
-			extractFromChanges(v2.TxChangesAfter, entries)
+			extractFromChanges(v2.TxChangesBefore, ledgerEntries)
+			extractFromChanges(v2.TxChangesAfter, ledgerEntries)
 		}
 
 	case 3:
 		if v3 := resultMeta.TxApplyProcessing.V3; v3 != nil {
-			extractFromLedgerEntryChanges(v3.Operations, entries)
+			extractFromLedgerEntryChanges(v3.Operations, ledgerEntries)
 			// Also extract from TxChangesBefore and TxChangesAfter
-			extractFromChanges(v3.TxChangesBefore, entries)
-			extractFromChanges(v3.TxChangesAfter, entries)
+			extractFromChanges(v3.TxChangesBefore, ledgerEntries)
+			extractFromChanges(v3.TxChangesAfter, ledgerEntries)
 		}
 	}
 
-	return entries, nil
+	return ledgerEntries, nil
 }
 
 // extractFromLedgerEntryChanges processes operation-level changes
@@ -319,7 +319,7 @@ func NewContractInstanceKey(contractID string) (xdr.LedgerKey, error) {
 		ContractData: &xdr.LedgerKeyContractData{
 			Contract: xdr.ScAddress{
 				Type:       xdr.ScAddressTypeScAddressTypeContract,
-				ContractId: &hash,
+				ContractId: (*xdr.ContractId)(&hash),
 			},
 			Key: xdr.ScVal{
 				Type: xdr.ScValTypeScvLedgerKeyContractInstance,

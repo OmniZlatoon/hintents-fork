@@ -4,6 +4,7 @@
 package decoder
 
 import (
+	"encoding/base64"
 	"fmt"
 
 	"github.com/stellar/go-stellar-sdk/xdr"
@@ -20,7 +21,11 @@ type DecodedEnvelope struct {
 func AnalyzeEnvelope(b64 string) (*DecodedEnvelope, error) {
 	var env xdr.TransactionEnvelope
 
-	if err := xdr.SafeUnmarshalBase64(b64, &env); err != nil {
+	data, err := base64.StdEncoding.DecodeString(b64)
+	if err != nil {
+		return nil, err
+	}
+	if err := env.UnmarshalBinary(data); err != nil {
 		return nil, err
 	}
 
