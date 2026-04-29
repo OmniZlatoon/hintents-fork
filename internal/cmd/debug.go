@@ -42,42 +42,42 @@ import (
 )
 
 var (
-	networkFlag         string
-	rpcURLFlag          string
-	rpcTokenFlag        string
-	tracingEnabled      bool
-	otlpExporterURL     string
-	generateTrace       bool
-	traceOutputFile     string
-	snapshotFlag        string
-	compareNetworkFlag  string
-	verbose             bool
-	wasmPath            string
-	args                []string
+	networkFlag          string
+	rpcURLFlag           string
+	rpcTokenFlag         string
+	tracingEnabled       bool
+	otlpExporterURL      string
+	generateTrace        bool
+	traceOutputFile      string
+	snapshotFlag         string
+	compareNetworkFlag   string
+	verbose              bool
+	wasmPath             string
+	args                 []string
 	mockLedgerEntryFlags []string
 	mockLedgerManifest   string
-	themeFlag           string
-	noCacheFlag         bool
-	demoMode            bool
-	watchFlag           bool
-	watchTimeoutFlag    int
-	hotReloadFlag       bool
-	hotReloadInterval   time.Duration
-	snapshotsFlag       bool
-	protocolVersionFlag uint32
-	auditKeyFlag        string
-	publishIPFSFlag     bool
-	publishArweaveFlag  bool
-	ipfsNodeFlag        string
-	arweaveGatewayFlag  string
-	arweaveWalletFlag   string
-	mockTimeFlag        int64
-	mockBaseFeeFlag     uint32
-	mockGasPriceFlag    uint64
-	exportSVGFlag       string
-	loadSnapshotsFlag   string
-	saveSnapshotsFlag   string
-	wasmBase64          string
+	themeFlag            string
+	noCacheFlag          bool
+	demoMode             bool
+	watchFlag            bool
+	watchTimeoutFlag     int
+	hotReloadFlag        bool
+	hotReloadInterval    time.Duration
+	snapshotsFlag        bool
+	protocolVersionFlag  uint32
+	auditKeyFlag         string
+	publishIPFSFlag      bool
+	publishArweaveFlag   bool
+	ipfsNodeFlag         string
+	arweaveGatewayFlag   string
+	arweaveWalletFlag    string
+	mockTimeFlag         int64
+	mockBaseFeeFlag      uint32
+	mockGasPriceFlag     uint64
+	exportSVGFlag        string
+	loadSnapshotsFlag    string
+	saveSnapshotsFlag    string
+	wasmBase64           string
 )
 
 // DebugCommand holds dependencies for the debug command
