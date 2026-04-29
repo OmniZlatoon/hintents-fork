@@ -27,6 +27,8 @@ var (
 	ProfileFormatFlag string
 	DeepLinkFlag      string
 	VersionFlag       bool
+	JSONFlag          bool
+	QuietFlag         bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -224,6 +226,18 @@ func init() {
 		false,
 		"Print erst version",
 	)
+	rootCmd.PersistentFlags().BoolVar(
+		&JSONFlag,
+		"json",
+		false,
+		"Output in JSON format",
+	)
+	rootCmd.PersistentFlags().BoolVar(
+		&QuietFlag,
+		"quiet",
+		false,
+		"Suppress non-error output",
+	)
 	// Hide from normal help output; it is an internal dispatch mechanism.
 	_ = rootCmd.PersistentFlags().MarkHidden("deep-link")
 
@@ -249,6 +263,4 @@ func init() {
 		Title: "Utility Commands:",
 	})
 
-	// Register commands
-	rootCmd.AddCommand(statsCmd)
 }

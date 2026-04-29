@@ -34,20 +34,18 @@ var versionCmd = &cobra.Command{
 	Long:    "Display detailed build information including version, commit hash, and build date",
 	Args:    cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		jsonOutput, _ := cmd.Flags().GetBool("json")
-
 		info := getVersionInfo()
 
-		if jsonOutput {
+		if JSONFlag {
 			output, _ := json.MarshalIndent(info, "", "  ")
 			fmt.Println(string(output))
-		} else {
-			fmt.Printf("Erst Version: %s\n", info.Version)
-			fmt.Printf("Commit SHA:   %s\n", info.CommitSHA)
-			fmt.Printf("Build Date:   %s\n", info.BuildDate)
-			fmt.Printf("Go Version:   %s\n", info.GoVersion)
+			return
 		}
-		fmt.Printf("erst version %s\n", Version)
+
+		fmt.Printf("Erst Version: %s\n", info.Version)
+		fmt.Printf("Commit SHA:   %s\n", info.CommitSHA)
+		fmt.Printf("Build Date:   %s\n", info.BuildDate)
+		fmt.Printf("Go Version:   %s\n", info.GoVersion)
 	},
 }
 
@@ -85,5 +83,4 @@ func getVersionInfo() VersionInfo {
 
 func init() {
 	rootCmd.AddCommand(versionCmd)
-	versionCmd.Flags().Bool("json", false, "Output version information in JSON format")
 }

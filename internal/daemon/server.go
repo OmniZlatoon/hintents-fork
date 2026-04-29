@@ -16,8 +16,8 @@ import (
 	stellarrpc "github.com/dotandev/hintents/internal/rpc"
 	"github.com/dotandev/hintents/internal/simulator"
 	"github.com/dotandev/hintents/internal/telemetry"
-	"github.com/gorilla/rpc/v2"
-	"github.com/gorilla/rpc/v2/json2"
+	"github.com/gorilla/rpc"
+	"github.com/gorilla/rpc/json2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/attribute"
 )

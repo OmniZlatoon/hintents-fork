@@ -25,13 +25,13 @@ const (
 var statsSessionFlag string
 
 type contractStat struct {
-	contractID    string
-	eventCount    int
-	storageWrites int
-	authChecks    int
-	estimatedCost uint64
-	callDepth     int
-	seenTypes     map[string]bool
+	ContractID    string `json:"contract_id"`
+	EventCount    int    `json:"event_count"`
+	StorageWrites int    `json:"storage_writes"`
+	AuthChecks    int    `json:"auth_checks"`
+	EstimatedCost uint64 `json:"estimated_cost"`
+	CallDepth     int    `json:"call_depth"`
+	SeenTypes     map[string]bool `json:"-"`
 }
 
 var statsCmd = &cobra.Command{
@@ -58,7 +58,20 @@ func runStats(cmd *cobra.Command, args []string) error {
 
 	stats := buildContractStats(simResp)
 	if len(stats) == 0 {
-		fmt.Println("No contract call data found in the session.")
+		if !JSONFlag {
+			fmt.Println("No contract call data found in the session.")
+		} else {
+			fmt.Println("[]")
+		}
+		return nil
+	}
+
+	if JSONFlag {
+		data, err := json.MarshalIndent(stats, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal stats to JSON: %w", err)
+		}
+		fmt.Println(string(data))
 		return nil
 	}
 
@@ -97,24 +110,24 @@ func buildContractStats(resp *simulator.SimulationResponse) []contractStat {
 		}
 		id := *contractID
 		if _, ok := index[id]; !ok {
-			index[id] = &contractStat{contractID: id, seenTypes: make(map[string]bool)}
+			index[id] = &contractStat{ContractID: id, SeenTypes: make(map[string]bool)}
 		}
 
 		s := index[id]
-		s.eventCount++
-		s.estimatedCost += eventCost(eventType)
+		s.EventCount++
+		s.EstimatedCost += eventCost(eventType)
 
 		lowerType := strings.ToLower(eventType)
 		switch lowerType {
 		case "storage_write":
-			s.storageWrites++
+			s.StorageWrites++
 		case "require_auth", "auth":
-			s.authChecks++
+			s.AuthChecks++
 		}
 
-		if !s.seenTypes[lowerType] {
-			s.seenTypes[lowerType] = true
-			s.callDepth++
+		if !s.SeenTypes[lowerType] {
+			s.SeenTypes[lowerType] = true
+			s.CallDepth++
 		}
 	}
 
@@ -134,10 +147,10 @@ func buildContractStats(resp *simulator.SimulationResponse) []contractStat {
 	}
 
 	sort.Slice(result, func(i, j int) bool {
-		if result[i].estimatedCost != result[j].estimatedCost {
-			return result[i].estimatedCost > result[j].estimatedCost
+		if result[i].EstimatedCost != result[j].EstimatedCost {
+			return result[i].EstimatedCost > result[j].EstimatedCost
 		}
-		return result[i].contractID < result[j].contractID
+		return result[i].ContractID < result[j].ContractID
 	})
 
 	if len(result) > statsTopN {
@@ -164,11 +177,11 @@ func printStatsTable(stats []contractStat) {
 	fmt.Println(strings.Repeat("-", colContract+23))
 
 	for i, s := range stats {
-		displayID := s.contractID
+		displayID := s.ContractID
 		if len(displayID) > colContract {
 			displayID = displayID[:colContract-3] + "..."
 		}
-		fmt.Printf("%d. %-41s | %-12d | %-7d\n", i+1, displayID, s.estimatedCost, s.callDepth)
+		fmt.Printf("%d. %-41s | %-12d | %-7d\n", i+1, displayID, s.EstimatedCost, s.CallDepth)
 	}
 }
 

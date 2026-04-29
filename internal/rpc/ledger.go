@@ -112,7 +112,6 @@ func ExtractLedgerEntriesFromMeta(resultMetaXDR string) (map[string]string, erro
 		return nil, errors.WrapUnmarshalFailed(err, "result meta binary")
 	}
 
-	entries := make(map[string]string)
 
 	// Extract entries from TransactionMeta
 	switch resultMeta.TxApplyProcessing.V {
