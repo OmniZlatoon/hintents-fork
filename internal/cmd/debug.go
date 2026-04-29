@@ -78,100 +78,6 @@ var (
 	wasmBase64          string
 )
 
-// DebugCommand holds dependencies for the debug command
-type DebugCommand struct {
-	Runner simulator.RunnerInterface
-}
-
-// NewDebugCommand creates a new debug command with dependencies
-func NewDebugCommand(runner simulator.RunnerInterface) *cobra.Command {
-	debugCmd := &DebugCommand{Runner: runner}
-	return debugCmd.createCommand()
-}
-
-func (d *DebugCommand) createCommand() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "debug <transaction-hash>",
-		Short: "Debug a failed Soroban transaction",
-		Long: `Fetch a transaction envelope from the Stellar network and prepare it for simulation.
-
-Example:
-  erst debug 5c0a1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab
-  erst debug --network testnet <tx-hash>`,
-		Args: cobra.ExactArgs(1),
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			// Validate network flag
-			switch rpc.Network(networkFlag) {
-			case rpc.Testnet, rpc.Mainnet, rpc.Futurenet:
-				return nil
-			default:
-				return errors.WrapInvalidNetwork(networkFlag)
-			}
-		},
-		RunE: d.runDebug,
-	}
-
-	// Set up flags
-	cmd.Flags().StringVarP(&networkFlag, "network", "n", string(rpc.Mainnet), "Stellar network to use (testnet, mainnet, futurenet)")
-	cmd.Flags().StringVar(&rpcURLFlag, "rpc-url", "", "Custom Horizon RPC URL to use")
-	cmd.Flags().StringVar(&rpcTokenFlag, "rpc-token", "", "RPC authentication token (can also use ERST_RPC_TOKEN env var)")
-	cmd.Flags().BoolVar(&snapshotsFlag, "snapshots", false, "Enable simulator snapshot capture (default: disabled)")
-
-	return cmd
-}
-
-func (d *DebugCommand) runDebug(cmd *cobra.Command, cmdArgs []string) error {
-	txHash := cmdArgs[0]
-
-	token := rpcTokenFlag
-	if token == "" {
-		token = os.Getenv("ERST_RPC_TOKEN")
-	}
-	if token == "" {
-		cfg, err := config.Load()
-		if err == nil && cfg.RPCToken != "" {
-			token = cfg.RPCToken
-		}
-	}
-
-	opts := []rpc.ClientOption{
-		rpc.WithNetwork(rpc.Network(networkFlag)),
-		rpc.WithToken(token),
-	}
-	if rpcURLFlag != "" {
-		opts = append(opts, rpc.WithHorizonURL(rpcURLFlag))
-	}
-
-	client, err := rpc.NewClient(opts...)
-	if err != nil {
-		return errors.WrapValidationError(fmt.Sprintf("failed to create client: %v", err))
-	}
-
-	fmt.Printf("Debugging transaction: %s\n", txHash)
-	fmt.Printf("Network: %s\n", networkFlag)
-	if rpcURLFlag != "" {
-		fmt.Printf("RPC URL: %s\n", rpcURLFlag)
-	}
-
-	// Fetch transaction details
-	resp, err := client.GetTransaction(cmd.Context(), txHash)
-	if err != nil {
-		return errors.WrapRPCConnectionFailed(err)
-	}
-
-	fmt.Printf("Transaction fetched successfully. Envelope size: %d bytes\n", len(resp.EnvelopeXdr))
-
-	simReq := &simulator.SimulationRequest{
-		EnvelopeXdr:   resp.EnvelopeXdr,
-		ResultMetaXdr: resp.ResultMetaXdr,
-	}
-	_, err = d.Runner.Run(cmd.Context(), simReq)
-	if err != nil {
-		return errors.WrapSimulationFailed(err, txHash)
-	}
-
-	return nil
-}
 
 var debugCmd = &cobra.Command{
 	Use:   "debug <transaction-hash>",
@@ -238,7 +144,9 @@ Local WASM Replay Mode:
 			defer probeCancel()
 			if resolved, err := rpc.ResolveNetwork(probeCtx, args[0], token); err == nil {
 				networkFlag = string(resolved)
-				fmt.Printf("Resolved network: %s\n", networkFlag)
+				if !QuietFlag {
+					fmt.Printf("Resolved network: %s\n", networkFlag)
+				}
 			}
 		}
 
@@ -300,7 +208,9 @@ Local WASM Replay Mode:
 			uiStore = s
 			defer uiStore.Close()
 			if prev, err := uiStore.LoadSectionState(ctx, txHash); err == nil && len(prev) > 0 {
-				fmt.Printf("Restoring viewer state: last session showed [%s] for this transaction.\n", strings.Join(prev, ", "))
+				if !QuietFlag {
+					fmt.Printf("Restoring viewer state: last session showed [%s] for this transaction.\n", strings.Join(prev, ", "))
+				}
 			}
 		}
 
@@ -385,10 +295,12 @@ Local WASM Replay Mode:
 
 		_ = client.CheckStaleness(ctx, networkFlag)
 
-		fmt.Printf("Debugging transaction: %s\n", txHash)
-		fmt.Printf("Primary Network: %s\n", networkFlag)
-		if compareNetworkFlag != "" {
-			fmt.Printf("Comparing against Network: %s\n", compareNetworkFlag)
+		if !QuietFlag {
+			fmt.Printf("Debugging transaction: %s\n", txHash)
+			fmt.Printf("Primary Network: %s\n", networkFlag)
+			if compareNetworkFlag != "" {
+				fmt.Printf("Comparing against Network: %s\n", compareNetworkFlag)
+			}
 		}
 
 		// Fetch transaction details
@@ -531,13 +443,25 @@ Local WASM Replay Mode:
 				if err != nil {
 					return errors.WrapSimulationFailed(err, "")
 				}
-				printSimulationResult(networkFlag, simResp)
-				// Print simulation budget usage if present
-				if simResp != nil && simResp.BudgetUsage != nil {
-					fmt.Printf("\nSimulation Budget Usage:\n")
-					fmt.Printf("  CPU Instructions: %d / %d (%.2f%%)\n", simResp.BudgetUsage.CPUInstructions, simResp.BudgetUsage.CPULimit, simResp.BudgetUsage.CPUUsagePercent)
-					fmt.Printf("  Memory Bytes: %d / %d (%.2f%%)\n", simResp.BudgetUsage.MemoryBytes, simResp.BudgetUsage.MemoryLimit, simResp.BudgetUsage.MemoryUsagePercent)
-					fmt.Printf("  Operations: %d\n", simResp.BudgetUsage.OperationsCount)
+
+				if JSONFlag {
+					data, err := json.MarshalIndent(simResp, "", "  ")
+					if err != nil {
+						return fmt.Errorf("failed to marshal simulation response to JSON: %w", err)
+					}
+					fmt.Println(string(data))
+					return nil
+				}
+
+				if !QuietFlag {
+					printSimulationResult(networkFlag, simResp)
+					// Print simulation budget usage if present
+					if simResp != nil && simResp.BudgetUsage != nil {
+						fmt.Printf("\nSimulation Budget Usage:\n")
+						fmt.Printf("  CPU Instructions: %d / %d (%.2f%%)\n", simResp.BudgetUsage.CPUInstructions, simResp.BudgetUsage.CPULimit, simResp.BudgetUsage.CPUUsagePercent)
+						fmt.Printf("  Memory Bytes: %d / %d (%.2f%%)\n", simResp.BudgetUsage.MemoryBytes, simResp.BudgetUsage.MemoryLimit, simResp.BudgetUsage.MemoryUsagePercent)
+						fmt.Printf("  Operations: %d\n", simResp.BudgetUsage.OperationsCount)
+					}
 				}
 				// Fetch contract bytecode on demand for any contract calls in the trace; cache via RPC client
 				if client != nil && simResp != nil && len(simResp.DiagnosticEvents) > 0 {
@@ -1107,7 +1031,7 @@ func extractLedgerKeys(metaXdr string) ([]string, error) {
 	}
 
 	var meta xdr.TransactionResultMeta
-	if err := xdr.SafeUnmarshal(data, &meta); err != nil {
+	if err := meta.UnmarshalBinary(data); err != nil {
 		return nil, err
 	}
 

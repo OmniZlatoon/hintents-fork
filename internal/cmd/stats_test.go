@@ -39,8 +39,8 @@ func TestBuildContractStats_SingleContract(t *testing.T) {
 
 	s := stats[0]
 	wantCost := uint64(costWeightStorageWrite + costWeightAuth)
-	if s.estimatedCost != wantCost {
-		t.Errorf("estimatedCost = %d, want %d", s.estimatedCost, wantCost)
+	if s.EstimatedCost != wantCost {
+		t.Errorf("EstimatedCost = %d, want %d", s.EstimatedCost, wantCost)
 	}
 }
 
@@ -55,8 +55,8 @@ func TestBuildContractStats_Sorted(t *testing.T) {
 
 	stats := buildContractStats(resp)
 
-	if stats[0].contractID != expensive {
-		t.Errorf("expected %s first, got %s", expensive, stats[0].contractID)
+	if stats[0].ContractID != expensive {
+		t.Errorf("expected %s first, got %s", expensive, stats[0].ContractID)
 	}
 }
 
