@@ -141,14 +141,12 @@ func DecodeDiagnosticEvents(events []simulator.DiagnosticEvent, maxDepth int) (*
 			if current.Function != returnedFn && current.Function != "TOP_LEVEL" {
 				iter := current.parent
 				found := false
-				tempDepth := currentDepth - 1
 				for iter != nil {
 					if iter.Function == returnedFn {
 						found = true
 						break
 					}
 					iter = iter.parent
-					tempDepth--
 				}
 				if found {
 					for current != iter {

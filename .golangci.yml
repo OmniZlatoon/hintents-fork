@@ -10,6 +10,7 @@ linters:
     - ineffassign
     - govet
     - staticcheck
+    - unused
 
 issues:
   max-issues-per-linter: 0

@@ -32,7 +32,8 @@ fi
 # Validate go.mod version is represented in CI matrix (best-effort, non-fatal)
 GO_VERSION=$(grep "^go " go.mod | awk '{print $2}')
 if grep -q "go-version:" .github/workflows/ci.yml; then
-    if grep -q "go-version: \"${GO_VERSION}\"" .github/workflows/ci.yml; then
+    # Match version regardless of whether it is in a list [ "1.25.0" ] or a string "1.25.0"
+    if grep -E "go-version:.*\"${GO_VERSION}\"" .github/workflows/ci.yml > /dev/null; then
         echo " Go version ${GO_VERSION} is present in CI matrix"
     else
         echo " Warning: Go version mismatch between go.mod (${GO_VERSION}) and CI matrix"

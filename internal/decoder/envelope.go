@@ -56,6 +56,7 @@ func decodeV0(tx xdr.TransactionV0) (*DecodedEnvelope, error) {
 		Operations: tx.Operations,
 	}, nil
 }
+
 func decodeV1(tx xdr.Transaction) (*DecodedEnvelope, error) {
 	return &DecodedEnvelope{
 		Type:       "TransactionV1",

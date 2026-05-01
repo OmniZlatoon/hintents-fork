@@ -39,11 +39,19 @@ EOF
 
 # Run golangci-lint and expect it to catch the unused variable.
 if command -v golangci-lint &> /dev/null; then
-    if golangci-lint run --config="${REPO_ROOT}/.golangci.yml" "${TMP_PKG}/..." > /dev/null 2>&1; then
+    # Capture output to verify it's the expected lint error
+    LINT_OUT=$(golangci-lint run --config="${REPO_ROOT}/.golangci.yml" "${TMP_PKG}/..." 2>&1)
+    LINT_EXIT=$?
+    
+    if [ $LINT_EXIT -eq 0 ]; then
         echo "[FAIL] Strict linting failed to catch unused variable"
         exit 1
-    else
+    elif echo "$LINT_OUT" | grep -q "unused"; then
         echo "[OK] Strict linting caught unused variable"
+    else
+        echo "[FAIL] golangci-lint failed with unexpected error:"
+        echo "$LINT_OUT"
+        exit 1
     fi
 else
     echo "golangci-lint not available, skipping verification"
