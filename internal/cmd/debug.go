@@ -32,6 +32,7 @@ import (
 	"github.com/dotandev/hintents/internal/telemetry"
 	"github.com/dotandev/hintents/internal/tokenflow"
 	simtypes "github.com/dotandev/hintents/internal/types"
+	"github.com/dotandev/hintents/internal/version"
 	"github.com/dotandev/hintents/internal/visualizer"
 	"github.com/dotandev/hintents/internal/wat"
 	"github.com/dotandev/hintents/internal/watch"
@@ -42,40 +43,42 @@ import (
 )
 
 var (
-	networkFlag         string
-	rpcURLFlag          string
-	rpcTokenFlag        string
-	tracingEnabled      bool
-	otlpExporterURL     string
-	generateTrace       bool
-	traceOutputFile     string
-	snapshotFlag        string
-	compareNetworkFlag  string
-	verbose             bool
-	wasmPath            string
-	args                []string
-	themeFlag           string
-	noCacheFlag         bool
-	demoMode            bool
-	watchFlag           bool
-	watchTimeoutFlag    int
-	hotReloadFlag       bool
-	hotReloadInterval   time.Duration
-	snapshotsFlag       bool
-	protocolVersionFlag uint32
-	auditKeyFlag        string
-	publishIPFSFlag     bool
-	publishArweaveFlag  bool
-	ipfsNodeFlag        string
-	arweaveGatewayFlag  string
-	arweaveWalletFlag   string
-	mockTimeFlag        int64
-	mockBaseFeeFlag     uint32
-	mockGasPriceFlag    uint64
-	exportSVGFlag       string
-	loadSnapshotsFlag   string
-	saveSnapshotsFlag   string
-	wasmBase64          string
+	networkFlag          string
+	rpcURLFlag           string
+	rpcTokenFlag         string
+	tracingEnabled       bool
+	otlpExporterURL      string
+	generateTrace        bool
+	traceOutputFile      string
+	snapshotFlag         string
+	compareNetworkFlag   string
+	verbose              bool
+	wasmPath             string
+	args                 []string
+	mockLedgerEntryFlags []string
+	mockLedgerManifest   string
+	themeFlag            string
+	noCacheFlag          bool
+	demoMode             bool
+	watchFlag            bool
+	watchTimeoutFlag     int
+	hotReloadFlag        bool
+	hotReloadInterval    time.Duration
+	snapshotsFlag        bool
+	protocolVersionFlag  uint32
+	auditKeyFlag         string
+	publishIPFSFlag      bool
+	publishArweaveFlag   bool
+	ipfsNodeFlag         string
+	arweaveGatewayFlag   string
+	arweaveWalletFlag    string
+	mockTimeFlag         int64
+	mockBaseFeeFlag      uint32
+	mockGasPriceFlag     uint64
+	exportSVGFlag        string
+	loadSnapshotsFlag    string
+	saveSnapshotsFlag    string
+	wasmBase64           string
 )
 
 
@@ -375,6 +378,11 @@ Local WASM Replay Mode:
 			}
 		}
 
+		overrideEntries, err := loadMockLedgerOverrides()
+		if err != nil {
+			return err
+		}
+
 		var lastSimResp *simulator.SimulationResponse
 
 		// Collected per-timestamp states written to disk when --save-snapshots is set.
@@ -413,6 +421,11 @@ Local WASM Replay Mode:
 					} else {
 						logger.Logger.Info("Extracted ledger entries for simulation", "count", len(ledgerEntries))
 					}
+				}
+
+				if len(overrideEntries) > 0 {
+					ledgerEntries = simulator.MergeLedgerOverrides(ledgerEntries, overrideEntries)
+					fmt.Printf("Applied %d mock ledger override entries\n", len(overrideEntries))
 				}
 
 				if saveSnapshotsFlag != "" {
@@ -489,6 +502,10 @@ Local WASM Replay Mode:
 							return
 						}
 					}
+					if len(overrideEntries) > 0 {
+						entries = simulator.MergeLedgerOverrides(entries, overrideEntries)
+						fmt.Printf("Applied %d mock ledger override entries to primary comparison\n", len(overrideEntries))
+					}
 					primaryReq := &simulator.SimulationRequest{
 						EnvelopeXdr:     resp.EnvelopeXdr,
 						ResultMetaXdr:   resp.ResultMetaXdr,
@@ -530,8 +547,13 @@ Local WASM Replay Mode:
 						}
 					}
 
+					if len(overrideEntries) > 0 {
+						entries = simulator.MergeLedgerOverrides(entries, overrideEntries)
+						fmt.Printf("Applied %d mock ledger override entries to compare comparison\n", len(overrideEntries))
+					}
+
 					compareReq := &simulator.SimulationRequest{
-						EnvelopeXdr:     resp.EnvelopeXdr,
+						EnvelopeXdr:     compareResp.EnvelopeXdr,
 						ResultMetaXdr:   compareResp.ResultMetaXdr,
 						LedgerEntries:   entries,
 						Timestamp:       ts,
@@ -597,7 +619,7 @@ Local WASM Replay Mode:
 
 		// Persist snapshot registry to disk when --save-snapshots is set.
 		if saveSnapshotsFlag != "" && len(collectedEntries) > 0 {
-			reg := debug.New(Version, txHash, networkFlag, resp.EnvelopeXdr, resp.ResultMetaXdr)
+			reg := debug.New(version.Version, txHash, networkFlag, resp.EnvelopeXdr, resp.ResultMetaXdr)
 			for _, ce := range collectedEntries {
 				reg.Add(ce.ts, snapshot.FromMap(ce.entries))
 			}
@@ -708,7 +730,7 @@ Local WASM Replay Mode:
 			ResultMetaXdr:   resp.ResultMetaXdr,
 			SimRequestJSON:  string(simReqJSON),
 			SimResponseJSON: string(simRespJSON),
-			ErstVersion:     Version,
+			ErstVersion:     version.Version,
 			SchemaVersion:   session.SchemaVersion,
 		}
 		SetCurrentSession(sessionData)
@@ -842,8 +864,38 @@ func newLocalWasmSimulationRequest(forceNoCache bool) *simulator.SimulationReque
 	return req
 }
 
+func loadMockLedgerOverrides() (map[string]string, error) {
+	var overrides map[string]string
+	if mockLedgerManifest != "" {
+		manifestOverrides, err := simulator.LoadLedgerOverrideManifest(mockLedgerManifest)
+		if err != nil {
+			return nil, errors.WrapValidationError(fmt.Sprintf("failed to load mock ledger manifest: %v", err))
+		}
+		overrides = simulator.MergeLedgerOverrides(overrides, manifestOverrides)
+	}
+
+	if len(mockLedgerEntryFlags) > 0 {
+		flagOverrides, err := simulator.ParseLedgerOverrideFlags(mockLedgerEntryFlags)
+		if err != nil {
+			return nil, errors.WrapValidationError(fmt.Sprintf("failed to parse mock ledger entries: %v", err))
+		}
+		overrides = simulator.MergeLedgerOverrides(overrides, flagOverrides)
+	}
+
+	return overrides, nil
+}
+
 func runLocalWasmReplayOnce(ctx context.Context, runner simulator.RunnerInterface, forceNoCache bool) error {
 	req := newLocalWasmSimulationRequest(forceNoCache)
+
+	overrideEntries, err := loadMockLedgerOverrides()
+	if err != nil {
+		return err
+	}
+	if len(overrideEntries) > 0 {
+		req.LedgerEntries = simulator.MergeLedgerOverrides(req.LedgerEntries, overrideEntries)
+		fmt.Printf("Applied %d mock ledger override entries for local replay\n", len(overrideEntries))
+	}
 
 	// Run simulation
 	fmt.Printf("%s Executing contract locally...\n", visualizer.Symbol("play"))
@@ -1426,6 +1478,8 @@ func init() {
 	debugCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 	debugCmd.Flags().StringVar(&wasmPath, "wasm", "", "Path to local WASM file for local replay (no network required)")
 	debugCmd.Flags().StringSliceVar(&args, "args", []string{}, "Mock arguments for local replay (JSON array of strings)")
+	debugCmd.Flags().StringSliceVar(&mockLedgerEntryFlags, "mock-ledger-entry", []string{}, "Override ledger entries before simulation using key:value; repeatable")
+	debugCmd.Flags().StringVar(&mockLedgerManifest, "mock-ledger-manifest", "", "Path to a JSON manifest containing ledger_entries for override state")
 	debugCmd.Flags().BoolVar(&noCacheFlag, "no-cache", false, "Disable local ledger state caching")
 	debugCmd.Flags().BoolVar(&demoMode, "demo", false, "Print sample output (no network) - for testing color detection")
 	debugCmd.Flags().BoolVar(&watchFlag, "watch", false, "Poll for transaction on-chain before debugging")

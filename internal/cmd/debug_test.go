@@ -192,6 +192,12 @@ func TestDebugCommand_Setup(t *testing.T) {
 	mockGasPrice := debugCmd.Flags().Lookup("mock-gas-price")
 	assert.NotNil(t, mockGasPrice)
 
+	mockLedgerEntry := debugCmd.Flags().Lookup("mock-ledger-entry")
+	assert.NotNil(t, mockLedgerEntry)
+
+	mockLedgerManifest := debugCmd.Flags().Lookup("mock-ledger-manifest")
+	assert.NotNil(t, mockLedgerManifest)
+
 	snapshots := debugCmd.Flags().Lookup("snapshots")
 	assert.NotNil(t, snapshots)
 	assert.Equal(t, "false", snapshots.DefValue)
