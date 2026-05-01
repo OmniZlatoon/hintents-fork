@@ -42,11 +42,14 @@ func buildErstBinary(t *testing.T, repoRoot string) string {
 		debugCmd.Dir = repoRoot
 		debugOut, _ := debugCmd.CombinedOutput()
 
-		lsCmd := exec.Command("ls", "-la", "internal/cmd")
-		lsCmd.Dir = repoRoot
-		lsOut, _ := lsCmd.CombinedOutput()
+		// Provide better debug info without relying on platform-specific 'ls'
+		files, _ := os.ReadDir(filepath.Join(repoRoot, "internal", "cmd"))
+		fileList := ""
+		for _, f := range files {
+			fileList += f.Name() + "\n"
+		}
 
-		t.Fatalf("failed to build erst binary: %v\nstderr:\n%s\ngo env:\n%s\nls internal/cmd:\n%s", err, stderr.String(), string(debugOut), string(lsOut))
+		t.Fatalf("failed to build erst binary: %v\nstderr:\n%s\ngo env:\n%s\nfiles in internal/cmd:\n%s", err, stderr.String(), string(debugOut), fileList)
 	}
 	return binPath
 }

@@ -16,8 +16,12 @@ jobs:
   # Go Strict Linting
   # ============================================
   go-lint:
-    name: Go Strict Linting
-    runs-on: ubuntu-latest
+    name: Go Strict Linting (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
       - name: Checkout code
@@ -26,7 +30,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.25.0"
           cache: true
           cache-dependency-path: go.sum
 
@@ -51,7 +55,7 @@ jobs:
         uses: golangci/golangci-lint-action@v7
         with:
           version: latest
-          args: --config=.golangci.yml --timeout=5m --max-issues-per-linter=0 --max-same-issues=0
+          args: --config=.golangci.yml --timeout=5m
 
       - name: Check for unused variables
         run: |
@@ -61,6 +65,7 @@ jobs:
             exit 1
           fi
           echo " No unused variables detected"
+        shell: bash
 
   # ============================================
   # Rust Strict Linting

@@ -24,8 +24,6 @@ import (
 var (
 	TimestampFlag     int64
 	WindowFlag        int64
-	ProfileFlag       bool
-	ProfileFormatFlag string
 	DeepLinkFlag      string
 	VersionFlag       bool
 	JSONFlag          bool
@@ -80,7 +78,7 @@ Get started with 'erst debug --help' or visit the documentation.`,
 		return nil
 	},
 	SilenceUsage:  true,
-	SilenceErrors: true,
+	SilenceErrors: false,
 	Version:       version.Version,
 }
 
@@ -200,19 +198,7 @@ func init() {
 		"Run range simulation across a time window (seconds)",
 	)
 
-	rootCmd.PersistentFlags().BoolVar(
-		&ProfileFlag,
-		"profile",
-		false,
-		"Enable CPU/Memory profiling and generate a flamegraph",
-	)
 
-	rootCmd.PersistentFlags().StringVar(
-		&ProfileFormatFlag,
-		"profile-format",
-		"html",
-		"Flamegraph export format: 'html' (interactive) or 'svg' (raw)",
-	)
 
 	rootCmd.PersistentFlags().StringVar(
 		&DeepLinkFlag,

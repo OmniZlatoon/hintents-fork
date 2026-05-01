@@ -48,8 +48,6 @@ var (
 	rpcTokenFlag         string
 	tracingEnabled       bool
 	otlpExporterURL      string
-	generateTrace        bool
-	traceOutputFile      string
 	snapshotFlag         string
 	compareNetworkFlag   string
 	verbose              bool
@@ -1471,8 +1469,6 @@ func init() {
 	debugCmd.Flags().StringVar(&rpcTokenFlag, "rpc-token", "", "RPC authentication token (can also use ERST_RPC_TOKEN env var)")
 	debugCmd.Flags().BoolVar(&tracingEnabled, "tracing", false, "Enable tracing")
 	debugCmd.Flags().StringVar(&otlpExporterURL, "otlp-url", "http://localhost:4318", "OTLP URL")
-	debugCmd.Flags().BoolVar(&generateTrace, "generate-trace", false, "Generate trace file")
-	debugCmd.Flags().StringVar(&traceOutputFile, "trace-output", "", "Trace output file")
 	debugCmd.Flags().StringVar(&snapshotFlag, "snapshot", "", "Load state from JSON snapshot file")
 	debugCmd.Flags().StringVar(&compareNetworkFlag, "compare-network", "", "Network to compare against (testnet, mainnet, futurenet)")
 	debugCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
