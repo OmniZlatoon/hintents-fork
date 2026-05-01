@@ -355,7 +355,7 @@ func TestExtractLedgerKeys(t *testing.T) {
 	assert.True(t, found, "Key not found in extracted keys")
 }
 
-func buildTestEnvelopeXdr(t *testing.T) string { //nolint:unused
+func buildTestEnvelopeXdr(t *testing.T) string { //nolint:unused // Reserved for future test use
 	t.Helper()
 
 	sourceAccount := xdr.MustAddress("GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H")
